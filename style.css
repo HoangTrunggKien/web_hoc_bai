@@ -94,6 +94,16 @@ header {
     position: relative;
 }
 
+/* Bridge gap giữa parent và dropdown-content để chuột không rớt khỏi hover */
+.dropdown::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 10px;
+}
+
 .dropdown-content {
     display: none;
     position: absolute;
