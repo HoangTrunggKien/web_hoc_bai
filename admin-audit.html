@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiểm soát dữ liệu | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Admin</div></div></div><div class="dashboard-nav"><a href="dashboard.html">Quay lại cổng admin</a><a href="index.html">Trang chủ</a><a href="index.html" id="adminAuditLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content"><div class="dashboard-topbar"><div><h1>Kiểm soát dữ liệu lớp</h1><p class="dashboard-subtitle">Theo dõi chất lượng dữ liệu và nhật ký hoạt động.</p></div></div>
+        <section class="section-card">
+            <h3 style="margin-bottom:14px;">Thống kê hệ thống</h3>
+            <div class="mini-stat-grid" style="margin-bottom:14px;">
+                <div class="mini-stat"><strong id="userCount">0</strong><span class="small-note">Tài khoản</span></div>
+                <div class="mini-stat"><strong id="classCount">0</strong><span class="small-note">Lớp học</span></div>
+                <div class="mini-stat"><strong id="studentCount">0</strong><span class="small-note">Học sinh tham gia</span></div>
+            </div>
+        </section>
+        <section class="section-card">
+            <h3 style="margin-bottom:14px;">Nhật ký hoạt động (50 mục gần đây)</h3>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr><th>Thời gian</th><th>Người dùng</th><th>Hành động</th><th>Chi tiết</th></tr></thead>
+                    <tbody id="auditLogs"></tbody>
+                </table>
+            </div>
+        </section></main>
+    </div>
+    <script>document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('admin', 'login.html')) return;
+        GeoConnectApp.bindLogout('#adminAuditLogout');
+
+        const userCount = document.getElementById('userCount');
+        const classCount = document.getElementById('classCount');
+        const studentCount = document.getElementById('studentCount');
+        const auditLogs = document.getElementById('auditLogs');
+
+        const [users, classes, logs] = await Promise.all([
+            GeoConnectApp.getAllUsers(),
+            GeoConnectApp.getClasses(),
+            GeoConnectApp.getAuditLogs(50),
+        ]);
+        userCount.textContent = users.length;
+        classCount.textContent = classes.length;
+
+        // Tính tổng enrollments = sum of class students
+        const studentLists = await Promise.all(classes.map(c => GeoConnectApp.getClassStudents(c.id).catch(() => [])));
+        studentCount.textContent = studentLists.reduce((s, arr) => s + arr.length, 0);
+
+        auditLogs.innerHTML = logs.map(log => {
+            const date = new Date(log.timestamp).toLocaleString('vi-VN');
+            const user = users.find(u => u.username === log.userId);
+            return `
+                <tr>
+                    <td>${date}</td>
+                    <td>${user ? user.fullName : log.userId}</td>
+                    <td>${log.action}</td>
+                    <td style="font-size:12px; color:#666;">${JSON.stringify(log.details).substring(0, 80)}</td>
+                </tr>`;
+        }).join('');
+    });</script>
+</body>
+</html>

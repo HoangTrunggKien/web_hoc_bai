@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống kê hệ thống | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .stat-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .stat-card strong { display: block; font-size: 32px; color: #d32f2f; margin-bottom: 6px; }
+        .stat-card span { display: block; font-size: 13px; color: #666; }
+        .chart-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .chart-card h3 { margin: 0 0 16px 0; color: #d32f2f; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .chart-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
+        .chart-canvas-wrap { position: relative; height: 280px; }
+        .top-actions-list { list-style: none; padding: 0; margin: 0; }
+        .top-actions-list li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+        .top-actions-list li:last-child { border-bottom: none; }
+        .top-actions-list .action-name { font-family: monospace; color: #d32f2f; }
+        .top-actions-list .action-count { font-weight: 600; color: #555; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Admin</div></div></div>
+            <div class="dashboard-nav">
+                <a href="dashboard.html">Quay lại cổng admin</a>
+                <a href="index.html">Trang chủ</a>
+                <a href="index.html" id="adminStatsLogout">Đăng xuất</a>
+            </div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>📊 Thống kê hệ thống</h1><p class="dashboard-subtitle">Trực quan hoá dữ liệu toàn hệ thống GeoConnect 6.</p></div></div>
+
+            <section class="section-card">
+                <div class="stat-grid" id="summaryStats"></div>
+            </section>
+
+            <section class="section-card">
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <h3>👥 Người dùng theo vai trò</h3>
+                        <div class="chart-canvas-wrap"><canvas id="roleChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>📈 Phổ điểm toàn hệ thống</h3>
+                        <div class="chart-canvas-wrap"><canvas id="histogramChart"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-card">
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <h3>🔐 Lượt đăng nhập (14 ngày)</h3>
+                        <div class="chart-canvas-wrap"><canvas id="loginChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>⚙️ Hành động phổ biến (30 ngày)</h3>
+                        <ul class="top-actions-list" id="topActionsList"></ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('admin', 'login.html')) return;
+        GeoConnectApp.bindLogout('#adminStatsLogout');
+
+        const stats = await GeoConnectApp.getAdminStats();
+        renderSummary(stats.summary);
+        renderRoleChart(stats.roleCounts);
+        renderHistogram(stats.histogram);
+        renderLoginChart(stats.logins);
+        renderTopActions(stats.topActions);
+    });
+
+    function renderSummary(s) {
+        document.getElementById('summaryStats').innerHTML = `
+            <div class="stat-card"><strong>${s.user_count}</strong><span>Tài khoản</span></div>
+            <div class="stat-card"><strong>${s.class_count}</strong><span>Lớp học</span></div>
+            <div class="stat-card"><strong>${s.enrollment_count}</strong><span>Đăng ký lớp</span></div>
+            <div class="stat-card"><strong>${s.assignment_count}</strong><span>Bài tập</span></div>
+            <div class="stat-card"><strong>${s.submission_count}</strong><span>Bài nộp</span></div>
+            <div class="stat-card"><strong>${s.graded_count}</strong><span>Đã chấm</span></div>
+            <div class="stat-card"><strong>${Number(s.avg_score).toFixed(1)}</strong><span>Điểm TB</span></div>
+        `;
+    }
+
+    function renderRoleChart(rows) {
+        const labels = { admin: 'Admin', teacher: 'Giáo viên', parent: 'Phụ huynh', student: 'Học sinh' };
+        new Chart(document.getElementById('roleChart'), {
+            type: 'doughnut',
+            data: {
+                labels: rows.map(r => labels[r.role] || r.role),
+                datasets: [{
+                    data: rows.map(r => r.count),
+                    backgroundColor: ['#d32f2f', '#27ae60', '#0056b3', '#8e44ad'],
+                }],
+            },
+            options: { responsive: true, maintainAspectRatio: false },
+        });
+    }
+
+    function renderHistogram(data) {
+        const labels = ['0-5', '5-6.5', '6.5-8', '8-9', '9-10'];
+        const counts = labels.map(l => { const r = data.find(d => d.bucket === l); return r ? r.count : 0; });
+        new Chart(document.getElementById('histogramChart'), {
+            type: 'bar',
+            data: { labels, datasets: [{ label: 'Số bài', data: counts, backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#20c997', '#27ae60'], borderRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+        });
+    }
+
+    function renderLoginChart(rows) {
+        const days = [];
+        const today = new Date();
+        for (let i = 13; i >= 0; i--) {
+            const d = new Date(today); d.setDate(d.getDate() - i);
+            const key = d.toISOString().slice(0, 10);
+            const r = rows.find(x => x.day === key);
+            days.push({ label: d.getDate() + '/' + (d.getMonth() + 1), count: r ? r.count : 0 });
+        }
+        new Chart(document.getElementById('loginChart'), {
+            type: 'line',
+            data: { labels: days.map(d => d.label), datasets: [{ label: 'Đăng nhập', data: days.map(d => d.count), borderColor: '#d32f2f', backgroundColor: 'rgba(211, 47, 47, 0.15)', fill: true, tension: 0.3 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+        });
+    }
+
+    function renderTopActions(rows) {
+        const el = document.getElementById('topActionsList');
+        if (!rows.length) { el.innerHTML = '<li style="color:#999;">Chưa có hoạt động nào</li>'; return; }
+        el.innerHTML = rows.map(r => `<li><span class="action-name">${r.action}</span><span class="action-count">${r.count}</span></li>`).join('');
+    }
+    </script>
+</body>
+</html>

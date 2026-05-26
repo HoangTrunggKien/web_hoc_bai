@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả học tập | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .detail-table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        .detail-table tr { border-bottom: 1px solid #eee; }
+        .detail-table th, .detail-table td { padding: 12px 10px; text-align: left; }
+        .detail-table th { background: #f0f5ff; font-weight: 600; }
+        .score-badge { display: inline-block; min-width: 45px; padding: 4px 10px; border-radius: 6px; text-align: center; font-weight: 600; }
+        .score-good { background: #e8f5e9; color: #2e7d32; }
+        .score-fair { background: #fff3e0; color: #e65100; }
+        .score-excellent { background: #e3f2fd; color: #1565c0; }
+        .expandable-section { margin-bottom: 14px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .expand-header { padding: 14px; background: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+        .expand-header:hover { background: #e9ecef; }
+        .expand-icon { display: inline-block; transition: transform 0.3s; }
+        .expand-icon.open { transform: rotate(180deg); }
+        .expand-content { display: none; padding: 14px; background: white; }
+        .expand-content.open { display: block; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Phụ huynh</div></div></div>
+            <div class="dashboard-nav"><a href="parent-dashboard.html">Quay lại cổng phụ huynh</a><a href="index.html">Trang chủ</a><a href="index.html" id="parentResultsLogout">Đăng xuất</a></div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>Kết quả học tập</h1><p class="dashboard-subtitle">Theo dõi điểm số và tiến độ chi tiết của con em bạn.</p></div></div>
+            <section class="section-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>Học sinh</label>
+                        <div style="padding: 12px 14px; background: #f8f9fa; border-radius: 12px; font-weight: 500;" id="studentDisplayArea">--</div>
+                    </div>
+                    <a href="parent-setup.html" style="padding: 10px 14px; background: #e9ecef; border-radius: 6px; text-decoration: none; color: #333; font-size: 13px; margin-top: 24px;">Đổi học sinh</a>
+                </div>
+                <div id="resultContent"></div>
+            </section>
+        </main>
+    </div>
+    <script>document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('parent', 'login.html')) return;
+        GeoConnectApp.bindLogout('#parentResultsLogout');
+
+        const resultContent = document.getElementById('resultContent');
+        const session = await GeoConnectApp.getParentSession();
+        if (!session.selectedStudentUsername) { window.location.href = 'parent-setup.html'; return; }
+        const studentUsername = session.selectedStudentUsername;
+        const selectedStudent = session.selectedStudent;
+
+        document.getElementById('studentDisplayArea').textContent = selectedStudent ? selectedStudent.fullName + ' (' + studentUsername + ')' : '--';
+
+        function getScoreBadgeClass(score) {
+            const n = parseFloat(score);
+            if (n >= 8.5) return 'score-excellent';
+            if (n >= 7.0) return 'score-good';
+            return 'score-fair';
+        }
+
+        async function loadResults() {
+            const studentClasses = await GeoConnectApp.getStudentClasses(studentUsername);
+            const allSubs = await GeoConnectApp.getStudentSubmissions(studentUsername);
+            let totalCompleted = 0, totalAssignments = 0, totalScore = 0, gradedCount = 0;
+
+            const perClass = await Promise.all(studentClasses.map(async cls => {
+                const [progress, assignments] = await Promise.all([
+                    GeoConnectApp.calculateStudentProgress(studentUsername, cls.id),
+                    GeoConnectApp.getAssignments(cls.id),
+                ]);
+                if (progress) {
+                    totalCompleted += progress.completedAssignments;
+                    totalAssignments += progress.totalAssignments;
+                    totalScore += parseFloat(progress.averageScore || 0) * progress.gradedAssignments;
+                    gradedCount += progress.gradedAssignments;
+                }
+                return { cls, progress, assignments };
+            }));
+
+            const overallCompletion = totalAssignments > 0 ? Math.round((totalCompleted / totalAssignments) * 100) : 0;
+            const overallScore = gradedCount > 0 ? (totalScore / gradedCount).toFixed(1) : 'N/A';
+
+            let html = '<div class="mini-stat-grid">';
+            html += '<div class="mini-stat"><strong>' + overallCompletion + '%</strong><span class="small-note">Tiến độ học tập</span></div>';
+            html += '<div class="mini-stat"><strong>' + overallScore + '</strong><span class="small-note">Điểm trung bình</span></div>';
+            html += '<div class="mini-stat"><strong>' + totalCompleted + '/' + totalAssignments + '</strong><span class="small-note">Nhiệm vụ hoàn thành</span></div>';
+            html += '</div>';
+            html += '<h3 style="margin-top:20px; margin-bottom:10px;">Chi tiết theo lớp:</h3>';
+
+            for (const { cls, progress, assignments } of perClass) {
+                if (!progress) continue;
+                html += '<div class="expandable-section">';
+                html += '<div class="expand-header" onclick="toggleExpanded(this)">';
+                html += '<div><strong style="font-size:16px;">' + cls.name + '</strong><br><span class="small-note">Điểm TB: ' + progress.averageScore + ' • Hoàn thành: ' + progress.completedAssignments + '/' + progress.totalAssignments + '</span></div>';
+                html += '<span class="expand-icon">▼</span></div>';
+                html += '<div class="expand-content"><table class="detail-table">';
+                html += '<tr><th>Bài tập</th><th style="text-align:center;">Loại</th><th style="text-align:center;">Hạn nộp</th><th style="text-align:center;">Điểm</th><th style="text-align:center;">Trạng thái</th></tr>';
+                assignments.forEach(assign => {
+                    const submission = allSubs.find(s => s.assignmentId === assign.id);
+                    const score = submission && submission.score != null ? submission.score : '-';
+                    const status = !submission ? 'Chưa nộp' : (submission.score != null ? 'Đã chấm' : 'Chờ chấm');
+                    const statusColor = !submission ? '#999' : (submission.score != null ? '#27ae60' : '#f39c12');
+                    const dueDate = assign.dueAt ? new Date(assign.dueAt).toLocaleDateString('vi-VN') : '-';
+                    const detailLink = 'parent-assignment-detail.html?id=' + assign.id + '&student=' + studentUsername;
+                    html += '<tr style="cursor:pointer;" onclick="window.location.href=\'' + detailLink + '\'">';
+                    html += '<td style="color:#0056b3; text-decoration:underline;">' + assign.title + '</td>';
+                    html += '<td style="text-align:center;"><span class="small-note">' + (assign.type === 'quiz' ? 'Trắc nghiệm' : 'Thực hành') + '</span></td>';
+                    html += '<td style="text-align:center;"><span class="small-note">' + dueDate + '</span></td>';
+                    html += '<td style="text-align:center;"><span class="score-badge ' + getScoreBadgeClass(score) + '">' + score + '</span></td>';
+                    html += '<td style="text-align:center;"><span class="small-note" style="color:' + statusColor + ';">' + status + '</span></td>';
+                    html += '</tr>';
+                    if (submission && submission.feedback) {
+                        html += '<tr style="background:#f9f9f9;"><td colspan="5" style="padding:8px 10px;"><span class="small-note"><strong>Nhận xét:</strong> ' + submission.feedback + '</span></td></tr>';
+                    }
+                });
+                html += '</table></div></div>';
+            }
+            resultContent.innerHTML = html;
+        }
+
+        window.toggleExpanded = function(element) {
+            const section = element.parentElement;
+            const content = section.querySelector('.expand-content');
+            const icon = section.querySelector('.expand-icon');
+            content.classList.toggle('open');
+            icon.classList.toggle('open');
+        };
+
+        await loadResults();
+    });</script>
+</body>
+</html>

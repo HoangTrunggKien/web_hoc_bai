@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thông báo | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .notification-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; gap: 12px; transition: all 0.2s; }
+        .notification-card:hover { box-shadow: 0 2px 8px rgba(142, 68, 173, 0.1); }
+        .notification-card.unread { background: #f5f0ff; border-color: #8e44ad; }
+        .notification-card.unread::before { content: ''; position: absolute; left: 0; width: 4px; height: 100%; background: #8e44ad; border-radius: 12px 0 0 12px; }
+        .notification-card:relative { position: relative; }
+        .notification-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .notification-icon.assignment { background: #e3f2fd; }
+        .notification-icon.grade { background: #e8f5e9; }
+        .notification-icon.deadline { background: #fff3e0; }
+        .notification-icon.message { background: #f3e5f5; }
+        .notification-content { flex: 1; }
+        .notification-content h4 { margin: 0 0 4px 0; color: #333; }
+        .notification-content p { margin: 4px 0; font-size: 13px; color: #666; }
+        .notification-time { font-size: 12px; color: #999; }
+        .notification-actions { display: flex; gap: 8px; }
+        .notification-action { padding: 6px 12px; font-size: 12px; border: none; border-radius: 6px; cursor: pointer; background: #f0f0f0; color: #333; transition: all 0.2s; }
+        .notification-action:hover { background: #8e44ad; color: white; }
+        .filter-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .filter-tab { padding: 8px 16px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; transition: all 0.2s; font-size: 13px; }
+        .filter-tab.active { background: #8e44ad; color: white; border-color: #8e44ad; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #999; }
+        .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+        .stat-row { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #f5f7fa; border-radius: 8px; margin-bottom: 12px; }
+        .stat-row .label { font-size: 13px; color: #666; }
+        .stat-row .value { font-weight: 600; color: #8e44ad; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Học sinh</div></div></div><div class="dashboard-nav"><a href="student-home.html">Quay lại cổng học sinh</a><a href="index.html">Trang chủ</a><a href="index.html" id="notificationsLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>Thông báo</h1><p class="dashboard-subtitle">Nhận thông báo về bài tập mới, điểm số và thông báo từ giáo viên.</p></div></div>
+            <section class="section-card">
+                <div class="stat-row">
+                    <div class="label">Tổng thông báo:</div>
+                    <div class="value" id="totalNotifications">0</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">Thông báo chưa đọc:</div>
+                    <div class="value" id="unreadNotifications">0</div>
+                </div>
+            </section>
+            <section class="section-card">
+                <h3 style="margin-bottom: 16px;">Lọc thông báo</h3>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" onclick="filterNotifications('all')">Tất cả</button>
+                    <button class="filter-tab" onclick="filterNotifications('assignment')">📝 Bài tập</button>
+                    <button class="filter-tab" onclick="filterNotifications('grade')">✓ Điểm số</button>
+                    <button class="filter-tab" onclick="filterNotifications('deadline')">⏰ Hạn chót</button>
+                    <button class="filter-tab" onclick="filterNotifications('message')">💬 Tin nhắn</button>
+                </div>
+            </section>
+            <section class="section-card">
+                <div id="notificationsContainer"></div>
+            </section>
+        </main>
+    </div>
+    <script>let allNotifications = []; let currentFilter = 'all';
+
+    function pickIcon(type) {
+        const map = { assignment: '📝', grade: '✓', deadline: '⏰', message: '💬', teacher_contact: '💬', teacher_broadcast: '💬', teacher_reply: '💬' };
+        return map[type] || '🔔';
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('student', 'login.html')) return;
+        GeoConnectApp.bindLogout('#notificationsLogout');
+
+        const user = await GeoConnectApp.getCurrentUser();
+        const totalNotificationsEl = document.getElementById('totalNotifications');
+        const unreadNotificationsEl = document.getElementById('unreadNotifications');
+
+        allNotifications = (await GeoConnectApp.getNotifications(user.username)).map(n => ({
+            id: n.id,
+            type: n.type || 'message',
+            title: n.title,
+            message: n.message,
+            teacher: n.senderName || 'Hệ thống',
+            className: '',
+            createdAt: new Date(n.createdAt).toLocaleString('vi-VN'),
+            read: !!n.read,
+            icon: pickIcon(n.type),
+        }));
+
+        totalNotificationsEl.textContent = allNotifications.length;
+        unreadNotificationsEl.textContent = allNotifications.filter(n => !n.read).length;
+
+        renderNotifications();
+    });
+
+    function renderNotifications() {
+        const notificationsContainer = document.getElementById('notificationsContainer');
+        const filtered = currentFilter === 'all' ? allNotifications : allNotifications.filter(n => n.type === currentFilter);
+        if (!filtered.length) {
+            notificationsContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>Không có thông báo nào trong danh mục này</p></div>';
+            return;
+        }
+        notificationsContainer.innerHTML = filtered.map(n => {
+            const readClass = n.read ? '' : 'unread';
+            return '<div class="notification-card ' + readClass + '"><div class="notification-icon ' + n.type + '">' + n.icon + '</div><div class="notification-content"><h4>' + n.title + '</h4><p>' + (n.message || '') + '</p><div class="notification-time">👤 ' + n.teacher + ' • ' + n.createdAt + '</div></div><div class="notification-actions">' + (n.read ? '' : '<button class="notification-action" onclick="markAsRead(\'' + n.id + '\')">Đánh dấu đã đọc</button>') + '</div></div>';
+        }).join('');
+    }
+
+    window.filterNotifications = function(type) {
+        currentFilter = type;
+        document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+        if (type === 'all') {
+            document.querySelectorAll('.filter-tab')[0].classList.add('active');
+        } else {
+            document.querySelectorAll('.filter-tab').forEach(tab => { if (tab.textContent.toLowerCase().includes(type)) tab.classList.add('active'); });
+        }
+        renderNotifications();
+    };
+
+    window.markAsRead = async function(notificationId) {
+        const notification = allNotifications.find(n => n.id === notificationId);
+        if (!notification) return;
+        try { await GeoConnectApp.markNotificationAsRead(notificationId); } catch {}
+        notification.read = true;
+        document.getElementById('unreadNotifications').textContent = allNotifications.filter(n => !n.read).length;
+        renderNotifications();
+    };
+    </script>
+</body>
+</html>

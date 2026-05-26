@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lớp học | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .class-card { background: white; border: 2px solid #eee; border-radius: 12px; padding: 20px; transition: all 0.3s; cursor: pointer; }
+        .class-card:hover { border-color: #27ae60; box-shadow: 0 8px 16px rgba(39,174,96,0.1); }
+        .class-code { font-size: 12px; color: #999; margin-bottom: 8px; font-family: monospace; }
+        .class-name { font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #333; }
+        .class-info { display: flex; gap: 12px; margin-bottom: 12px; }
+        .info-badge { display: inline-block; background: #f0f0f0; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .btn-group { display: flex; gap: 8px; }
+        .btn-class { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s; }
+        .btn-manage { background: #27ae60; color: white; }
+        .btn-manage:hover { background: #229954; }
+        .btn-delete { background: #e74c3c; color: white; }
+        .btn-delete:hover { background: #c0392b; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { font-size: 20px; font-weight: bold; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px; }
+        .modal-body { margin-bottom: 20px; }
+        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #eee; padding-top: 12px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #27ae60; }
+        .btn-primary { background: #27ae60; color: white; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; }
+        .btn-primary:hover { background: #229954; }
+        .btn-secondary { background: #e9ecef; color: #333; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-secondary:hover { background: #dee2e6; }
+        .tabs { display: flex; gap: 16px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .tab-btn { padding: 12px 0; border: none; background: none; cursor: pointer; font-weight: 500; border-bottom: 3px solid transparent; color: #666; }
+        .tab-btn.active { color: #27ae60; border-bottom-color: #27ae60; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .student-list { display: grid; gap: 8px; }
+        .student-item { padding: 12px; background: #f8f9fa; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .student-info { flex: 1; }
+        .student-name { font-weight: 500; }
+        .student-id { font-size: 12px; color: #999; }
+        .btn-remove { padding: 4px 8px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .enrollment-section { background: #f0f8ff; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Giáo viên</div></div></div>
+            <div class="dashboard-nav">
+                <a href="teacher-dashboard.html">Quay lại cổng giáo viên</a>
+                <a href="index.html">Trang chủ</a>
+                <a href="index.html" id="teacherClassesLogout">Đăng xuất</a>
+            </div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar">
+                <div>
+                    <h1>Lớp học</h1>
+                    <p class="dashboard-subtitle">Tạo lớp mới, quản lý danh sách học sinh và thông tin lớp</p>
+                </div>
+            </div>
+            <section class="section-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">Danh sách lớp học</h2>
+                    <button class="btn-primary" onclick="openCreateClassModal()">➕ Tạo lớp mới</button>
+                </div>
+                <div id="classList" class="class-grid"></div>
+            </section>
+
+            <!-- Create Class Modal -->
+            <div class="modal-overlay" id="createClassModal">
+                <div class="modal-content">
+                    <div class="modal-header">➕ Tạo lớp học mới</div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Tên lớp</label>
+                            <input type="text" id="newClassName" placeholder="Ví dụ: Địa lý 6A">
+                        </div>
+                        <div class="form-group">
+                            <label>Mã lớp (mã tham gia)</label>
+                            <input type="text" id="newClassCode" placeholder="Để trống để tự động tạo" value="">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" onclick="closeCreateClassModal()">Hủy</button>
+                        <button class="btn-primary" onclick="saveNewClass()">Tạo lớp</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manage Class Modal -->
+            <div class="modal-overlay" id="manageClassModal">
+                <div class="modal-content">
+                    <div class="modal-header" id="manageClassTitle"></div>
+                    <div class="modal-body">
+                        <div class="tabs">
+                            <button class="tab-btn active" onclick="switchTab('info')">Thông tin lớp</button>
+                            <button class="tab-btn" onclick="switchTab('students')">Danh sách học sinh</button>
+                            <button class="tab-btn" onclick="switchTab('enroll')">Thêm học sinh</button>
+                        </div>
+
+                        <!-- Info Tab -->
+                        <div class="tab-content active" id="tabInfo">
+                            <div style="display: grid; gap: 12px;">
+                                <div style="padding: 12px; background: #f0f8ff; border-radius: 6px;">
+                                    <div style="font-size: 12px; color: #666;">Mã lớp</div>
+                                    <div id="classCode" style="font-weight: 600; font-family: monospace; font-size: 18px;"></div>
+                                </div>
+                                <div style="padding: 12px; background: #f0f8ff; border-radius: 6px;">
+                                    <div style="font-size: 12px; color: #666;">Tên lớp</div>
+                                    <div id="className" style="font-weight: 600; font-size: 18px;"></div>
+                                </div>
+                                <div style="padding: 12px; background: #f0f8ff; border-radius: 6px;">
+                                    <div style="font-size: 12px; color: #666;">Số lượng học sinh</div>
+                                    <div id="studentCount" style="font-weight: 600; font-size: 18px;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Students Tab -->
+                        <div class="tab-content" id="tabStudents">
+                            <div id="classStudentList" class="student-list"></div>
+                        </div>
+
+                        <!-- Enroll Tab -->
+                        <div class="tab-content" id="tabEnroll">
+                            <div class="enrollment-section">
+                                <label style="font-weight: 600; margin-bottom: 12px; display: block;">Nhập mã học sinh</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="studentCodeInput" placeholder="Ví dụ: 12345" inputmode="numeric" maxlength="5" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                                    <button class="btn-primary" onclick="enrollByCode()" style="white-space: nowrap;">Thêm</button>
+                                </div>
+                                <div id="codeError" style="color: #e74c3c; font-size: 12px; margin-top: 6px; display: none;"></div>
+                            </div>
+                            <div style="color: #999; font-size: 13px; margin-top: 12px;">💡 Học sinh sẽ thấy lớp này trong danh sách của họ sau khi được thêm.</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" onclick="closeManageClassModal()">Đóng</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        let currentClassId = null;
+        let _me = null;
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (!await GeoConnectApp.ensureRoleAccess('teacher', 'login.html')) return;
+            GeoConnectApp.bindLogout('#teacherClassesLogout');
+            _me = await GeoConnectApp.getCurrentUser();
+            await loadClasses();
+
+            document.getElementById('createClassModal').addEventListener('click', function(e) {
+                if (e.target === this) closeCreateClassModal();
+            });
+            document.getElementById('manageClassModal').addEventListener('click', function(e) {
+                if (e.target === this) closeManageClassModal();
+            });
+        });
+
+        async function loadClasses() {
+            const classes = await GeoConnectApp.getTeacherClasses(_me.username);
+            const classList = document.getElementById('classList');
+            if (!classes.length) {
+                classList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 40px;">Bạn chưa có lớp nào. Hãy tạo lớp mới!</p>';
+                return;
+            }
+            const cards = await Promise.all(classes.map(async cls => {
+                const students = await GeoConnectApp.getClassStudents(cls.id);
+                return `
+                    <div class="class-card">
+                        <div class="class-code">Mã lớp: ${cls.code}</div>
+                        <div class="class-name">${cls.name}</div>
+                        <div class="class-info"><span class="info-badge">👥 ${students.length} học sinh</span></div>
+                        <div class="btn-group">
+                            <button class="btn-class btn-manage" onclick="openManageClassModal('${cls.id}')">Quản lý</button>
+                            <button class="btn-class btn-delete" onclick="deleteClassConfirm('${cls.id}')">Xóa</button>
+                        </div>
+                    </div>`;
+            }));
+            classList.innerHTML = cards.join('');
+        }
+
+        function openCreateClassModal() {
+            document.getElementById('createClassModal').classList.add('active');
+            document.getElementById('newClassName').value = '';
+            document.getElementById('newClassCode').value = '';
+            document.getElementById('newClassName').focus();
+        }
+
+        function closeCreateClassModal() { document.getElementById('createClassModal').classList.remove('active'); }
+
+        async function saveNewClass() {
+            const name = document.getElementById('newClassName').value.trim();
+            const code = document.getElementById('newClassCode').value.trim();
+            if (!name) { alert('Vui lòng nhập tên lớp'); return; }
+            try {
+                const finalCode = code || 'CLASS' + Math.random().toString(36).substr(2, 8).toUpperCase();
+                const result = await GeoConnectApp.createClass(name, finalCode, _me.username);
+                alert('✅ Tạo lớp thành công! Mã lớp: ' + result.code);
+                closeCreateClassModal();
+                await loadClasses();
+            } catch (error) {
+                alert('❌ Lỗi: ' + (error.data?.message || error.message));
+            }
+        }
+
+        async function openManageClassModal(classId) {
+            currentClassId = classId;
+            const [cls, students] = await Promise.all([
+                GeoConnectApp.getClassById(classId),
+                GeoConnectApp.getClassStudents(classId),
+            ]);
+            document.getElementById('manageClassTitle').textContent = '📚 ' + cls.name;
+            document.getElementById('classCode').textContent = cls.code;
+            document.getElementById('className').textContent = cls.name;
+            document.getElementById('studentCount').textContent = students.length;
+
+            const studentList = document.getElementById('classStudentList');
+            if (!students.length) {
+                studentList.innerHTML = '<p style="text-align: center; color: #999;">Lớp này chưa có học sinh</p>';
+            } else {
+                studentList.innerHTML = students.map(student => `
+                    <div class="student-item">
+                        <div class="student-info">
+                            <div class="student-name">${student.fullName}</div>
+                            <div class="student-id">📖 Mã: ${student.studentCode || 'N/A'} | @${student.username}</div>
+                        </div>
+                        <button class="btn-remove" onclick="removeStudent('${currentClassId}', '${student.username}')">Xóa</button>
+                    </div>`).join('');
+            }
+            document.getElementById('manageClassModal').classList.add('active');
+        }
+
+        function closeManageClassModal() {
+            document.getElementById('manageClassModal').classList.remove('active');
+            currentClassId = null;
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        async function enrollByCode() {
+            const studentCode = document.getElementById('studentCodeInput').value.trim();
+            const codeError = document.getElementById('codeError');
+            if (!studentCode) { codeError.textContent = 'Vui lòng nhập mã học sinh'; codeError.style.display = 'block'; return; }
+            if (studentCode.length !== 5 || isNaN(studentCode)) { codeError.textContent = 'Mã học sinh phải là 5 chữ số'; codeError.style.display = 'block'; return; }
+
+            const allStudents = await GeoConnectApp.getUsers({ role: 'student' });
+            const student = allStudents.find(s => s.studentCode === studentCode);
+            if (!student) { codeError.textContent = '❌ Không tìm thấy học sinh có mã này'; codeError.style.display = 'block'; return; }
+
+            const result = await GeoConnectApp.enrollStudent(currentClassId, student.username);
+            if (result.ok) {
+                alert('✅ Thêm học sinh ' + student.fullName + ' thành công!');
+                document.getElementById('studentCodeInput').value = '';
+                codeError.style.display = 'none';
+                openManageClassModal(currentClassId);
+            } else {
+                codeError.textContent = '❌ ' + result.message;
+                codeError.style.display = 'block';
+            }
+        }
+
+        async function removeStudent(classId, studentUsername) {
+            if (confirm('Xóa học sinh này khỏi lớp?')) {
+                try { await GeoConnectApp.removeStudentEnrollment(classId, studentUsername); alert('✅ Xóa học sinh thành công!'); openManageClassModal(classId); }
+                catch (err) { alert('❌ ' + (err.data?.message || err.message)); }
+            }
+        }
+
+        async function deleteClassConfirm(classId) {
+            if (confirm('Xóa lớp này?\nHành động này không thể hoàn tác!')) {
+                try { await GeoConnectApp.deleteClass(classId); alert('🗑️ Xóa lớp thành công'); await loadClasses(); }
+                catch (err) { alert('❌ ' + (err.data?.message || err.message)); }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thông báo | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { font-size: 20px; font-weight: bold; margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px; }
+        .modal-body { margin-bottom: 20px; }
+        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #eee; padding-top: 12px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; }
+        .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 100px; }
+        .form-group textarea:focus { outline: none; border-color: #0056b3; box-shadow: 0 0 0 2px rgba(0,86,179,0.1); }
+        .btn-primary { background: #0056b3; color: white; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; }
+        .btn-primary:hover { background: #004085; }
+        .btn-secondary { background: #e9ecef; color: #333; padding: 10px 16px; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-secondary:hover { background: #dee2e6; }
+        .sender-info { background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 16px; border-left: 4px solid #0056b3; }
+        .sender-name { font-weight: 600; color: #0056b3; }
+        .sender-time { font-size: 12px; color: #999; margin-top: 4px; }
+        .message-body { background: white; padding: 12px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 16px; white-space: pre-wrap; line-height: 1.6; }
+        .success-msg { padding: 12px; background: #d4edda; color: #155724; border-radius: 6px; margin-bottom: 12px; display: none; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Phụ huynh</div></div></div><div class="dashboard-nav"><a href="parent-dashboard.html">Quay lại cổng phụ huynh</a><a href="index.html">Trang chủ</a><a href="index.html" id="parentNotificationsLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content"><div class="dashboard-topbar"><div><h1>Nhận thông báo</h1><p class="dashboard-subtitle">Cập nhật các nhắc nhở và thông báo từ lớp học.</p></div></div><section class="section-card"><div class="notification-grid" id="notificationsList"></div></section></main>
+    </div>
+
+    <!-- Reply Modal -->
+    <div class="modal-overlay" id="replyModal">
+        <div class="modal-content">
+            <div class="modal-header">Trả lời thông báo</div>
+            <div class="modal-body">
+                <div class="sender-info">
+                    <div class="sender-name" id="replyFrom"></div>
+                    <div class="sender-time" id="replyTime"></div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <div style="margin-bottom: 12px;">
+                        <strong style="font-size: 13px; color: #666; text-transform: uppercase;">Chủ đề:</strong>
+                        <div id="replySubject" style="background: #f8f9fa; padding: 10px; border-radius: 6px; border-left: 3px solid #0056b3; font-weight: 600;"></div>
+                    </div>
+                    <div>
+                        <strong style="font-size: 13px; color: #666; text-transform: uppercase;">Nội dung:</strong>
+                        <div class="message-body" id="originalMessage"></div>
+                    </div>
+                </div>
+                <div class="success-msg" id="successMsg">✅ Tin nhắn đã được gửi thành công!</div>
+                <div class="form-group">
+                    <label>Trả lời</label>
+                    <textarea id="replyContent" placeholder="Nhập nội dung trả lời..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeReplyModal()">Đóng</button>
+                <button class="btn-primary" onclick="sendReply()">Gửi trả lời</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentReplyNotification = null;
+        let _user = null;
+        let _notifs = [];
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (!await GeoConnectApp.ensureRoleAccess('parent', 'login.html')) return;
+            GeoConnectApp.bindLogout('#parentNotificationsLogout');
+
+            _user = await GeoConnectApp.getCurrentUser();
+            const session = await GeoConnectApp.getParentSession();
+            if (!session.selectedStudentUsername) { window.location.href = 'parent-setup.html'; return; }
+
+            const notificationsList = document.getElementById('notificationsList');
+            _notifs = await GeoConnectApp.getNotifications(_user.username);
+
+            if (!_notifs.length) {
+                notificationsList.innerHTML = '<p style="text-align:center; color:#666; grid-column:1/-1;">Bạn không có thông báo nào</p>';
+            } else {
+                _notifs.sort((a, b) => b.createdAt - a.createdAt);
+                notificationsList.innerHTML = _notifs.map(notif => `
+                    <div class="notification-card" onclick="openReplyModal('${notif.id}')" style="cursor:pointer; opacity:${notif.read ? 0.6 : 1};">
+                        <strong>${notif.title}</strong>
+                        <p class="small-note">${(notif.message || '').substring(0, 100)}${(notif.message || '').length > 100 ? '...' : ''}</p>
+                        <p style="font-size:12px; color:#999; margin-top:6px;">${new Date(notif.createdAt).toLocaleDateString('vi-VN')} ${new Date(notif.createdAt).toLocaleTimeString('vi-VN')}</p>
+                    </div>`).join('');
+            }
+
+            window.openReplyModal = async function(notificationId) {
+                const notif = _notifs.find(n => n.id === notificationId);
+                if (!notif) return;
+                currentReplyNotification = notif;
+                if (!notif.read) {
+                    try { await GeoConnectApp.markNotificationAsRead(notificationId); } catch {}
+                }
+                document.getElementById('replyFrom').textContent = 'Từ: ' + (notif.senderName || 'Hệ thống');
+                document.getElementById('replyTime').textContent = new Date(notif.createdAt).toLocaleString('vi-VN');
+                document.getElementById('replySubject').textContent = notif.title || 'Không có chủ đề';
+                document.getElementById('originalMessage').textContent = notif.message || '';
+                document.getElementById('replyContent').value = '';
+                document.getElementById('successMsg').style.display = 'none';
+                document.getElementById('replyModal').classList.add('active');
+            };
+
+            window.closeReplyModal = function() {
+                document.getElementById('replyModal').classList.remove('active');
+                currentReplyNotification = null;
+                location.reload();
+            };
+
+            window.sendReply = async function() {
+                if (!currentReplyNotification || !currentReplyNotification.senderUsername) {
+                    alert('Không có người gửi để trả lời');
+                    return;
+                }
+                const replyContent = document.getElementById('replyContent').value.trim();
+                if (!replyContent) { alert('Vui lòng nhập nội dung trả lời'); return; }
+                try {
+                    await GeoConnectApp.addNotification(
+                        currentReplyNotification.senderUsername,
+                        'Trả lời: ' + (currentReplyNotification.title || ''),
+                        replyContent, 'parent_reply', _user.username, _user.fullName
+                    );
+                    document.getElementById('successMsg').style.display = 'block';
+                    document.getElementById('replyContent').value = '';
+                    setTimeout(() => closeReplyModal(), 1500);
+                } catch (err) {
+                    alert('Gửi thất bại: ' + (err.data?.message || err.message));
+                }
+            };
+
+            document.getElementById('replyModal').addEventListener('click', function(e) {
+                if (e.target === this) closeReplyModal();
+            });
+        });
+    </script>
+</body>
+</html>

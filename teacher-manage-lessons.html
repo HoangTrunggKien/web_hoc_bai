@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý bài giảng | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .lesson-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .lesson-table th { background: #27ae60; color: white; padding: 12px; text-align: left; font-weight: 600; }
+        .lesson-table td { padding: 12px; border-bottom: 1px solid #eee; }
+        .lesson-table tr:hover { background: #f9f9f9; }
+        .btn-group { display: flex; gap: 8px; }
+        .btn-small { display: inline-block; padding: 6px 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; text-decoration: none; }
+        .btn-small:hover { background: #7d3a96; }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-success { background: #27ae60; }
+        .btn-success:hover { background: #229954; }
+        .form-section { background: white; border: 1px solid #eee; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px; }
+        .form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; font-size: 14px; }
+        .form-group input[type="file"] { padding: 8px; cursor: pointer; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .resource-item-form { background: #f5f7fa; border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+        .resource-item-form input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+        }
+        .resource-item-form textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            margin-bottom: 8px;
+            resize: vertical;
+            min-height: 60px;
+            box-sizing: border-box;
+        }
+        .resource-item-form .btn-danger { margin-left: auto; }
+        .resource-controls { display: flex; gap: 8px; align-items: flex-end; }
+        .resource-controls input, .resource-controls select { flex: 1; }
+        .btn-add-resource { background: #3498db; color: white; padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; display: block; margin: 12px 0; }
+        .btn-add-resource:hover { background: #2980b9; }
+        .action-cell { white-space: nowrap; }
+        .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .form-section h3 { margin-top: 0; color: #27ae60; border-bottom: 2px solid #27ae60; padding-bottom: 12px; }
+        .tab-buttons { display: flex; gap: 8px; margin-bottom: 20px; }
+        .tab-btn { padding: 10px 16px; background: #f0f0f0; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; color: #333; }
+        .tab-btn.active { background: #27ae60; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #999; }
+        .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand">
+                <img src="logo.png" alt="GeoConnect 6">
+                <div>
+                    <strong>GeoConnect 6</strong>
+                    <div class="small-note">Cổng giáo viên</div>
+                </div>
+            </div>
+            <div class="dashboard-nav">
+                <a href="teacher-dashboard.html">Quay lại cổng giáo viên</a>
+                <a href="teacher-assignments.html">Giao bài tập</a>
+                <a href="teacher-grading.html">Chấm điểm</a>                <a href="index.html">Trang chủ</a>                <a href="index.html" id="teacherLessonLogout">Đăng xuất</a>
+            </div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar">
+                <div>
+                    <h1>Quản lý bài giảng</h1>
+                    <p class="dashboard-subtitle">Thêm, sửa hoặc xóa bài giảng cho các chapter địa lý.</p>
+                </div>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab('lessons-list')">📚 Danh sách bài giảng</button>
+                <button class="tab-btn" onclick="switchTab('add-lesson')">➕ Thêm bài giảng mới</button>
+                <button class="tab-btn" onclick="switchTab('edit-lesson')" id="editTabBtn" style="display:none;">✏️ Chỉnh sửa</button>
+            </div>
+
+            <!-- Danh sách bài giảng -->
+            <div id="lessons-list" class="tab-content active">
+                <section class="page-shell">
+                    <h3>📚 Các bài giảng hiện có</h3>
+                    <div id="lessonsContainer"></div>
+                </section>
+            </div>
+
+            <!-- Thêm bài giảng mới -->
+            <div id="add-lesson" class="tab-content">
+                <section class="form-section">
+                    <h3>Thêm bài giảng mới</h3>
+                    <form id="addLessonForm" onsubmit="handleAddLesson(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Tiêu đề bài giảng *</label>
+                                <input type="text" id="addTitle" required placeholder="VD: Hệ thống kinh, vĩ tuyến">
+                            </div>
+                            <div class="form-group">
+                                <label>Chapter *</label>
+                                <input type="number" id="addChapter" required min="1" max="10" placeholder="VD: 1">
+                            </div>
+                            <div class="form-group">
+                                <label>Lớp học *</label>
+                                <select id="addClassId" required onchange="updateClassInfo('add')">
+                                    <option value="">-- Chọn lớp --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mô tả ngắn gọn *</label>
+                            <textarea id="addDescription" required placeholder="Viết mô tả ngắn gọn về bài học (sẽ hiển thị trong danh sách)"></textarea>
+                        </div>
+
+                        <h4 style="margin-top: 20px; color: #333;">Tài liệu và tài nguyên</h4>
+                        <div id="addResourcesList"></div>
+                        <button type="button" class="btn-add-resource" data-mode="add" onclick="addResourceField('add'); return false;">📎 + Thêm tài liệu</button>
+
+                        <div style="margin-top: 20px;">
+                            <button type="submit" class="btn-primary" style="padding: 12px 24px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Lưu bài giảng</button>
+                            <button type="button" class="btn-outline" onclick="cancelAddLesson()" style="margin-left: 8px;">Hủy</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+
+            <!-- Chỉnh sửa bài giảng -->
+            <div id="edit-lesson" class="tab-content">
+                <section class="form-section">
+                    <h3>Chỉnh sửa bài giảng</h3>
+                    <div class="form-group" style="margin-bottom: 24px;">
+                        <label style="font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px; display: block;">📚 Chọn bài giảng cần sửa *</label>
+                        <select id="selectLessonToEdit" onchange="loadLessonToEdit()" style="padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; font-size: 14px; width: 100%;">
+                            <option value="">-- Chọn bài giảng --</option>
+                        </select>
+                    </div>
+                    <form id="editLessonForm" onsubmit="handleEditLesson(event)">
+                        <input type="hidden" id="editLessonId">
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Tiêu đề bài giảng *</label>
+                                <input type="text" id="editTitle" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Chapter *</label>
+                                <input type="number" id="editChapter" required min="1" max="10">
+                            </div>
+                            <div class="form-group">
+                                <label>Lớp học *</label>
+                                <select id="editClassId" required onchange="updateClassInfo('edit')">
+                                    <option value="">-- Chọn lớp --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mô tả ngắn gọn *</label>
+                            <textarea id="editDescription" required></textarea>
+                        </div>
+
+                        <h4 style="margin-top: 20px; color: #333;">Tài liệu và tài nguyên</h4>
+                        <div id="editResourcesList"></div>
+                        <button type="button" class="btn-add-resource" data-mode="edit" onclick="addResourceField('edit'); return false;">📎 + Thêm tài liệu</button>
+
+                        <div style="margin-top: 20px;">
+                            <button type="submit" class="btn-primary" style="padding: 12px 24px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Cập nhật bài giảng</button>
+                            <button type="button" class="btn-outline" onclick="cancelEdit()" style="margin-left: 8px;">Hủy</button>
+                            <button type="button" id="deleteBtn" class="btn-danger" style="margin-left: 8px; padding: 12px 24px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Xóa bài giảng</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentEditingLesson = null;
+        let addResourceCount = 0;
+        let editResourceCount = 0;
+
+        let _allClassesCache = [];
+        let _allLessonsCache = [];
+
+        async function loadClassOptions() {
+            const currentUser = await GeoConnectApp.getCurrentUser();
+            _allClassesCache = await GeoConnectApp.getTeacherClasses(currentUser.username);
+
+            const addSelect = document.getElementById('addClassId');
+            const editSelect = document.getElementById('editClassId');
+            _allClassesCache.forEach(cls => {
+                const option1 = document.createElement('option');
+                option1.value = cls.id; option1.textContent = cls.name;
+                addSelect.appendChild(option1);
+                const option2 = document.createElement('option');
+                option2.value = cls.id; option2.textContent = cls.name;
+                editSelect.appendChild(option2);
+            });
+        }
+
+        function updateClassInfo(mode) {}
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (!await GeoConnectApp.ensureRoleAccess('teacher', 'login.html')) return;
+            GeoConnectApp.bindLogout('#teacherLessonLogout');
+
+            await loadClassOptions();
+            await populateEditLessonDropdown();
+            await displayLessons();
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            if (tabName === 'edit-lesson') {
+                populateEditLessonDropdown();
+            }
+        }
+
+        async function displayLessons() {
+            _allLessonsCache = await GeoConnectApp.getLessons();
+            const container = document.getElementById('lessonsContainer');
+
+            if (!_allLessonsCache.length) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📚</div><p>Chưa có bài giảng nào. Hãy thêm bài giảng đầu tiên!</p></div>';
+                return;
+            }
+
+            let html = '<table class="lesson-table"><thead><tr><th>Tiêu đề</th><th>Chapter</th><th>Lớp học</th><th>Tài liệu</th><th>Hành động</th></tr></thead><tbody>';
+            const getClassName = (classId) => {
+                const cls = _allClassesCache.find(c => c.id === classId);
+                return cls ? cls.name : 'Không xác định';
+            };
+
+            _allLessonsCache.sort((a, b) => (a.chapter || 0) - (b.chapter || 0)).forEach(lesson => {
+                const resourceCount = (lesson.resources || []).length;
+                const desc = (lesson.description || 'Không có mô tả').substring(0, 60);
+                const className = getClassName(lesson.classId);
+                html += '<tr>';
+                html += '<td><strong>' + lesson.title + '</strong><br><small style="color:#999;">' + desc + '...</small></td>';
+                html += '<td><span style="background:#27ae60; color:white; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:600;">Chương ' + lesson.chapter + '</span></td>';
+                html += '<td><span style="background:#3498db; color:white; padding:4px 8px; border-radius:4px; font-size:12px; font-weight:600;">' + className + '</span></td>';
+                html += '<td>' + resourceCount + ' tài liệu</td>';
+                html += '<td class="action-cell"><div class="btn-group">';
+                html += '<button class="btn-small" onclick="editLesson(\'' + lesson.id + '\')">Sửa</button>';
+                html += '</div></td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function addResourceField(mode) {
+            console.log('addResourceField called with mode:', mode);
+            
+            const containerId = mode === 'add' ? 'addResourcesList' : 'editResourcesList';
+            const currentCount = mode === 'add' ? addResourceCount : editResourceCount;
+            const newCount = currentCount + 1;
+            
+            if (mode === 'add') {
+                addResourceCount = newCount;
+            } else {
+                editResourceCount = newCount;
+            }
+
+            const fieldId = mode + '_resource_' + newCount;
+            const container = document.getElementById(containerId);
+            
+            if (!container) {
+                console.error('Container not found:', containerId);
+                alert('Lỗi: Không tìm thấy vùng để thêm tài liệu. Vui lòng làm mới trang.');
+                return;
+            }
+            
+            console.log('Adding resource field:', {fieldId, mode, newCount});
+            
+            const fieldHtml = '<div class="resource-item-form" id="' + fieldId + '">' +
+                '<div class="form-row">' +
+                '<div class="form-group">' +
+                '<label>Tên tài liệu *</label>' +
+                '<input type="text" placeholder="VD: Video giới thiệu lưới kinh vĩ" class="resource-name-' + mode + '" data-id="' + newCount + '" required>' +
+                '</div>' +
+                '<div class="form-group">' +
+                '<label>Loại *</label>' +
+                '<select class="resource-type-' + mode + '" data-id="' + newCount + '">' +
+                '<option value="">-- Chọn loại --</option>' +
+                '<option value="video">📹 Video</option>' +
+                '<option value="pdf">📄 PDF</option>' +
+                '<option value="image">🖼️ Hình ảnh</option>' +
+                '<option value="document">📝 Tài liệu</option>' +
+                '<option value="link">🔗 Đường dẫn</option>' +
+                '</select>' +
+                '</div>' +
+                '</div>' +
+                '<div class="form-group">' +
+                '<label>Mô tả</label>' +
+                '<input type="text" placeholder="VD: Video 8 phút giải thích..." class="resource-desc-' + mode + '" data-id="' + newCount + '">' +
+                '</div>' +
+                '<div class="form-group">' +
+                '<label>🔗 Link URL tài liệu *</label>' +
+                '<input type="text" placeholder="VD: https://example.com/file.pdf" class="resource-url-' + mode + '" data-id="' + newCount + '" required>' +
+                '</div>' +
+                '<button type="button" class="btn-danger" onclick="removeResourceField(\'' + mode + '\', ' + newCount + ')">🗑️ Xóa</button>' +
+                '</div>';
+            
+            container.insertAdjacentHTML('beforeend', fieldHtml);
+            console.log('Resource field added successfully');
+        }
+
+        function removeResourceField(mode, id) {
+            document.getElementById(mode + '_resource_' + id).remove();
+        }
+
+        function collectResources(mode) {
+            const resources = [];
+            const container = document.getElementById(mode === 'add' ? 'addResourcesList' : 'editResourcesList');
+            const nameInputs = container.querySelectorAll('.resource-name-' + mode);
+            
+            nameInputs.forEach(input => {
+                const id = input.getAttribute('data-id');
+                const name = input.value.trim();
+                if (name) {
+                    const type = container.querySelector('.resource-type-' + mode + '[data-id="' + id + '"]').value;
+                    const description = container.querySelector('.resource-desc-' + mode + '[data-id="' + id + '"]').value.trim();
+                    const url = container.querySelector('.resource-url-' + mode + '[data-id="' + id + '"]').value.trim();
+                    
+                    const resource = {
+                        type: type || 'document',
+                        name: name,
+                        description: description || 'Tài liệu học tập',
+                        url: url || ''
+                    };
+                    
+                    resources.push(resource);
+                }
+            });
+            
+            return resources;
+        }
+
+        function cancelAddLesson() {
+            // Reset form
+            document.getElementById('addLessonForm').reset();
+            // Clear resources list
+            document.getElementById('addResourcesList').innerHTML = '';
+            // Reset counter
+            addResourceCount = 0;
+            
+            // Chuyển về tab danh sách
+            document.getElementById('lessons-list').classList.add('active');
+            document.getElementById('add-lesson').classList.remove('active');
+            document.getElementById('edit-lesson').classList.remove('active');
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            
+            // Refresh danh sách
+            displayLessons();
+        }
+
+        async function handleAddLesson(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('addTitle').value.trim();
+            const chapter = parseInt(document.getElementById('addChapter').value);
+            const classId = document.getElementById('addClassId').value.trim();
+            const description = document.getElementById('addDescription').value.trim();
+            const resources = collectResources('add');
+
+            if (!title || !chapter || !classId || !description) {
+                showAlert('Vui lòng điền đầy đủ các trường bắt buộc!', 'error');
+                return;
+            }
+
+            // Kiểm tra có ít nhất một resource
+            if (resources.length === 0) {
+                showAlert('⚠️ Vui lòng thêm ít nhất một tài liệu hoặc bài giảng!', 'error');
+                return;
+            }
+
+            // Kiểm tra mỗi resource có URL
+            let validResources = 0;
+            resources.forEach((res, idx) => {
+                if (res.url && res.url.trim() !== '' && res.url !== '#') {
+                    validResources++;
+                } else {
+                    console.warn('Resource ' + idx + ' không có URL:', res);
+                }
+            });
+
+            if (validResources === 0) {
+                showAlert('⚠️ Mỗi tài liệu phải có URL!', 'error');
+                return;
+            }
+
+            const lessonUrl = resources.length > 0 && resources[0].url ? resources[0].url : '';
+
+            try {
+                await GeoConnectApp.createLesson(title, chapter, description, '', resources, 0, lessonUrl, classId);
+                showAlert('✅ Bài giảng đã được thêm thành công!', 'success');
+                document.getElementById('addLessonForm').reset();
+                addResourceCount = 0;
+                document.getElementById('addResourcesList').innerHTML = '';
+                setTimeout(async () => {
+                    document.getElementById('lessons-list').classList.add('active');
+                    document.getElementById('add-lesson').classList.remove('active');
+                    document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                    document.querySelectorAll('.tab-btn')[1].classList.remove('active');
+                    await displayLessons();
+                }, 1500);
+            } catch (err) {
+                showAlert('❌ ' + (err.data?.message || err.message || 'Tạo bài giảng thất bại'), 'error');
+            }
+        }
+
+        async function populateEditLessonDropdown() {
+            const lessons = await GeoConnectApp.getLessons();
+            const select = document.getElementById('selectLessonToEdit');
+            while (select.options.length > 1) select.remove(1);
+
+            if (!lessons.length) {
+                select.innerHTML = '<option value="">-- Không có bài giảng nào --</option>';
+                return;
+            }
+            lessons.sort((a, b) => (a.chapter || 0) - (b.chapter || 0)).forEach(lesson => {
+                const option = document.createElement('option');
+                option.value = lesson.id;
+                option.textContent = 'Chương ' + (lesson.chapter || '?') + ': ' + lesson.title;
+                select.appendChild(option);
+            });
+        }
+
+        function loadLessonToEdit() {
+            const lessonId = document.getElementById('selectLessonToEdit').value;
+            if (!lessonId) {
+                document.getElementById('editLessonForm').reset();
+                document.getElementById('editResourcesList').innerHTML = '';
+                editResourceCount = 0;
+                return;
+            }
+            editLesson(lessonId);
+        }
+
+        async function editLesson(lessonId) {
+            const lesson = await GeoConnectApp.getLessonById(lessonId).catch(() => null);
+            if (!lesson) { showAlert('Không tìm thấy bài giảng!', 'error'); return; }
+
+            currentEditingLesson = lesson;
+
+            // Điền thông tin vào form
+            document.getElementById('editLessonId').value = lesson.id;
+            document.getElementById('editTitle').value = lesson.title || '';
+            document.getElementById('editChapter').value = lesson.chapter || '';
+            document.getElementById('editClassId').value = lesson.classId || '';
+            document.getElementById('editDescription').value = lesson.description || '';
+
+            // Xóa các field tài liệu cũ
+            document.getElementById('editResourcesList').innerHTML = '';
+            editResourceCount = 0;
+
+            // Thêm các tài liệu hiện có
+            (lesson.resources || []).forEach((resource, index) => {
+                editResourceCount++;
+                const fieldId = 'edit_resource_' + editResourceCount;
+                const container = document.getElementById('editResourcesList');
+                const fieldHtml = '<div class="resource-item-form" id="' + fieldId + '">' +
+                    '<div class="form-row">' +
+                    '<div class="form-group">' +
+                    '<label>Tên tài liệu *</label>' +
+                    '<input type="text" value="' + resource.name + '" class="resource-name-edit" data-id="' + editResourceCount + '" required>' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                    '<label>Loại *</label>' +
+                    '<select class="resource-type-edit" data-id="' + editResourceCount + '">' +
+                    '<option value="">-- Chọn loại --</option>' +
+                    '<option value="video" ' + (resource.type === 'video' ? 'selected' : '') + '>📹 Video</option>' +
+                    '<option value="pdf" ' + (resource.type === 'pdf' ? 'selected' : '') + '>📄 PDF</option>' +
+                    '<option value="image" ' + (resource.type === 'image' ? 'selected' : '') + '>🖼️ Hình ảnh</option>' +
+                    '<option value="document" ' + (resource.type === 'document' ? 'selected' : '') + '>📝 Tài liệu</option>' +
+                    '<option value="link" ' + (resource.type === 'link' ? 'selected' : '') + '>🔗 Đường dẫn</option>' +
+                    '</select>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                    '<label>Mô tả</label>' +
+                    '<input type="text" value="' + resource.description + '" class="resource-desc-edit" data-id="' + editResourceCount + '">' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                    '<label>🔗 Link URL tài liệu *</label>' +
+                    '<input type="text" value="' + (resource.url && resource.url !== '#' ? resource.url : '') + '" class="resource-url-edit" data-id="' + editResourceCount + '" required>' +
+                    '</div>' +
+                    '<button type="button" class="btn-danger" onclick="removeResourceField(\'edit\', ' + editResourceCount + ')">🗑️ Xóa</button>' +
+                    '</div></div>';
+                container.insertAdjacentHTML('beforeend', fieldHtml);
+            });
+
+            // Thiết lập nút xóa
+            document.getElementById('deleteBtn').onclick = () => deleteLesson(lessonId);
+
+            // Cập nhật dropdown trong tab chỉnh sửa
+            document.getElementById('selectLessonToEdit').value = lessonId;
+
+            // Chuyển sang tab chỉnh sửa
+            document.getElementById('edit-lesson').classList.add('active');
+            document.getElementById('lessons-list').classList.remove('active');
+            document.getElementById('add-lesson').classList.remove('active');
+            document.getElementById('editTabBtn').style.display = 'inline-block';
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('editTabBtn').classList.add('active');
+
+            window.scrollTo(0, 0);
+        }
+
+        async function handleEditLesson(event) {
+            event.preventDefault();
+            
+            const lessonId = document.getElementById('editLessonId').value;
+            const title = document.getElementById('editTitle').value.trim();
+            const chapter = parseInt(document.getElementById('editChapter').value);
+            const classId = document.getElementById('editClassId').value.trim();
+            const description = document.getElementById('editDescription').value.trim();
+            const resources = collectResources('edit');
+
+            if (!title || !chapter || !classId || !description) {
+                showAlert('Vui lòng điền đầy đủ các trường bắt buộc!', 'error');
+                return;
+            }
+
+            // Kiểm tra có ít nhất một resource
+            if (resources.length === 0) {
+                showAlert('⚠️ Vui lòng thêm ít nhất một tài liệu hoặc bài giảng!', 'error');
+                return;
+            }
+
+            // Kiểm tra mỗi resource có URL
+            let validResources = 0;
+            resources.forEach((res, idx) => {
+                if (res.url && res.url.trim() !== '' && res.url !== '#') {
+                    validResources++;
+                } else {
+                    console.warn('Resource ' + idx + ' không có URL:', res);
+                }
+            });
+
+            if (validResources === 0) {
+                showAlert('⚠️ Mỗi tài liệu phải có URL!', 'error');
+                return;
+            }
+
+            const lessonUrl = resources.length > 0 && resources[0].url ? resources[0].url : '';
+            try {
+                await GeoConnectApp.updateLesson(lessonId, { title, chapter, description, resources, lessonUrl, classId });
+                showAlert('✅ Bài giảng đã được cập nhật thành công!', 'success');
+                setTimeout(() => cancelEdit(), 1500);
+            } catch (err) {
+                showAlert('❌ ' + (err.data?.message || err.message || 'Cập nhật bài giảng thất bại'), 'error');
+            }
+        }
+
+        async function deleteLesson(lessonId) {
+            if (!confirm('Bạn chắc chắn muốn xóa bài giảng này? Hành động này không thể hoàn tác.')) return;
+            try {
+                await GeoConnectApp.deleteLesson(lessonId);
+                showAlert('✅ Bài giảng đã được xóa thành công!', 'success');
+                setTimeout(() => cancelEdit(), 1500);
+            } catch (err) {
+                showAlert('❌ ' + (err.data?.message || err.message || 'Xóa bài giảng thất bại'), 'error');
+            }
+        }
+
+        async function cancelEdit() {
+            currentEditingLesson = null;
+            document.getElementById('editLessonForm').reset();
+            document.getElementById('editResourcesList').innerHTML = '';
+            document.getElementById('selectLessonToEdit').value = '';
+            document.getElementById('editTabBtn').style.display = 'none';
+
+            document.getElementById('lessons-list').classList.add('active');
+            document.getElementById('edit-lesson').classList.remove('active');
+            document.getElementById('add-lesson').classList.remove('active');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+
+            await displayLessons();
+            window.scrollTo(0, 0);
+        }
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-' + type;
+            alertDiv.textContent = message;
+            alertContainer.insertAdjacentElement('afterbegin', alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

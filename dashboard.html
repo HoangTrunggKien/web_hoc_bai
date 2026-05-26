@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .dashboard-banner { background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%); color: white; padding: 24px; border-radius: 8px; margin-bottom: 20px; }
+        .dashboard-banner h2 { margin: 0 0 8px 0; font-size: 24px; }
+        .dashboard-banner p { margin: 0; opacity: 0.9; }
+        .role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .role-card { display: flex; flex-direction: column; padding: 20px; background: white; border: 2px solid #eee; border-radius: 8px; text-decoration: none; color: inherit; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .role-card:hover { border-color: #d32f2f; box-shadow: 0 8px 16px rgba(211,47,47,0.15); transform: translateY(-2px); }
+        .role-pill { display: inline-block; background: #d32f2f; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 12px; width: fit-content; }
+        .role-card h3 { margin: 0 0 8px 0; color: #d32f2f; font-size: 18px; }
+        .role-card p { margin: 0; color: #666; font-size: 13px; line-height: 1.5; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand">
+                <img src="logo.png" alt="GeoConnect 6">
+                <div>
+                    <strong>GeoConnect 6</strong>
+                    <div class="small-note">Cổng quản trị hệ thống</div>
+                </div>
+            </div>
+            <div class="dashboard-nav">
+                <a href="index.html">Trang chủ</a>
+                <a href="admin-accounts.html">Quản lý tài khoản</a>
+                <a href="admin-classes.html">Quản lý lớp học</a>
+                <a href="admin-audit.html">Kiểm soát dữ liệu</a>
+                <a href="index.html" id="adminHomeLogout">Đăng xuất</a>
+            </div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar">
+                <div>
+                    <h1>Cổng quản trị hệ thống</h1>
+                    <p class="dashboard-subtitle">Quản lý người dùng, lớp học và dữ liệu toàn bộ hệ thống.</p>
+                </div>
+            </div>
+            <section class="page-shell" style="padding-top: 0;">
+                <div class="dashboard-banner">
+                    <h2>Chào mừng Admin! 🔐</h2>
+                    <p>Chọn một chức năng bên dưới để quản lý hệ thống GeoConnect 6.</p>
+                </div>
+                <h3 style="margin-bottom: 16px;">Quản trị hệ thống</h3>
+                <div class="role-grid">
+                    <a class="role-card" href="admin-accounts.html"><div class="role-pill">👤 Tài khoản</div><h3>Quản lý tài khoản</h3><p>Tạo, sửa, xóa tài khoản người dùng và phân quyền hệ thống.</p></a>
+                    <a class="role-card" href="admin-classes.html"><div class="role-pill">📚 Lớp học</div><h3>Quản lý lớp học</h3><p>Xem tất cả lớp học, quản lý thông tin và enrollment.</p></a>
+                    <a class="role-card" href="admin-audit.html"><div class="role-pill">📊 Dữ liệu</div><h3>Kiểm soát dữ liệu</h3><p>Theo dõi nhật ký hoạt động, kiểm soát chất lượng dữ liệu.</p></a>
+                    <a class="role-card" href="admin-stats.html"><div class="role-pill">📈 Thống kê</div><h3>Thống kê hệ thống</h3><p>Dashboard trực quan: phổ điểm, người dùng, lượt đăng nhập.</p></a>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script>document.addEventListener('DOMContentLoaded', async function () { if (!await GeoConnectApp.ensureRoleAccess('admin', 'login.html')) return; GeoConnectApp.bindLogout('#adminHomeLogout'); });</script>
+</body>
+</html>

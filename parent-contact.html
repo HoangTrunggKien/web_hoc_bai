@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liên hệ giáo viên | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .teacher-card { padding: 16px; background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 16px; }
+        .teacher-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .teacher-name { display: flex; align-items: center; gap: 10px; }
+        .teacher-name h3 { margin: 0; color: #0056b3; }
+        .message-form { padding: 14px; background: #f8f9fa; border-radius: 8px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #333; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 14px; }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #0056b3; box-shadow: 0 0 0 2px rgba(0,86,179,0.1); }
+        .send-btn { background: #0056b3; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.3s; width: 100%; }
+        .send-btn:hover { background: #004085; }
+        .message-history { margin-top: 14px; max-height: 300px; overflow-y: auto; }
+        .message-item { padding: 10px; background: white; border-left: 3px solid #0056b3; margin-bottom: 8px; border-radius: 4px; font-size: 13px; }
+        .message-item .message-time { color: #999; font-size: 11px; margin-bottom: 4px; }
+        .message-item .message-text { color: #333; }
+        .contact-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+        .info-item { padding: 8px; background: #f0f5ff; border-radius: 6px; font-size: 13px; }
+        .info-item .label { color: #666; font-size: 11px; text-transform: uppercase; margin-bottom: 2px; }
+        .info-item .value { color: #0056b3; font-weight: 600; }
+        .success-message { padding: 12px; background: #d4edda; color: #155724; border-radius: 6px; margin-bottom: 12px; display: none; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Phụ huynh</div></div></div><div class="dashboard-nav"><a href="parent-dashboard.html">Quay lại cổng phụ huynh</a><a href="index.html">Trang chủ</a><a href="index.html" id="parentContactLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content"><div class="dashboard-topbar"><div><h1>Liên hệ giáo viên</h1><p class="dashboard-subtitle">Trao đổi với giáo viên về tiến độ và kết quả học tập của con em.</p></div></div><section class="section-card"><div id="teacherList"></div></section></main>
+    </div>
+    <script>document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('parent', 'login.html')) return;
+        GeoConnectApp.bindLogout('#parentContactLogout');
+
+        const user = await GeoConnectApp.getCurrentUser();
+        const teacherList = document.getElementById('teacherList');
+        const session = await GeoConnectApp.getParentSession();
+        if (!session.selectedStudentUsername) { window.location.href = 'parent-setup.html'; return; }
+
+        const studentClasses = await GeoConnectApp.getStudentClasses(session.selectedStudentUsername);
+        const allUsers = await GeoConnectApp.getAllUsers();
+        const teacherSet = new Set();
+        const teachers = [];
+        studentClasses.forEach(cls => {
+            if (!teacherSet.has(cls.teacher)) {
+                teacherSet.add(cls.teacher);
+                const teacher = allUsers.find(u => u.username === cls.teacher);
+                if (teacher) teachers.push(teacher);
+            }
+        });
+
+        if (!teachers.length) {
+            teacherList.innerHTML = '<p style="text-align:center; color:#666;">Không có giáo viên nào để liên hệ</p>';
+            return;
+        }
+        teacherList.innerHTML = teachers.map((teacher, index) => `
+            <div class="teacher-card">
+                <div class="teacher-header">
+                    <div class="teacher-name">
+                        <div style="width:40px; height:40px; background:#0056b3; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600;">${teacher.fullName.charAt(0)}</div>
+                        <div><h3>${teacher.fullName}</h3><p class="small-note" style="margin:0;">Giáo viên</p></div>
+                    </div>
+                </div>
+                <div class="contact-info">
+                    <div class="info-item"><div class="label">Email</div><div class="value">${teacher.contact || ''}</div></div>
+                    <div class="info-item"><div class="label">Trạng thái</div><div class="value">Sẵn sàng</div></div>
+                </div>
+                <div class="message-form">
+                    <div class="success-message" id="successMsg${index}">✓ Tin nhắn đã được gửi thành công!</div>
+                    <div class="form-group">
+                        <label>Chủ đề</label>
+                        <input type="text" class="contact-subject" data-teacher="${teacher.username}" placeholder="Ví dụ: Hỏi về bài tập toán">
+                    </div>
+                    <div class="form-group">
+                        <label>Nội dung</label>
+                        <textarea class="contact-message" data-teacher="${teacher.username}" placeholder="Nhập nội dung cần trao đổi..."></textarea>
+                    </div>
+                    <button class="send-btn" onclick="sendMessage('${teacher.username}', ${index})">Gửi tin nhắn</button>
+                </div>
+            </div>`).join('');
+
+        window.sendMessage = async function(teacherUsername, index) {
+            const subjectInput = document.querySelector('input[data-teacher="' + teacherUsername + '"].contact-subject');
+            const messageInput = document.querySelector('textarea[data-teacher="' + teacherUsername + '"].contact-message');
+            const subject = subjectInput.value.trim();
+            const message = messageInput.value.trim();
+            if (!subject || !message) { alert('Vui lòng nhập đủ chủ đề và nội dung'); return; }
+            try {
+                await GeoConnectApp.addNotification(
+                    teacherUsername,
+                    subject,
+                    message,
+                    'parent_contact',
+                    user.username, user.fullName,
+                );
+                const successMsg = document.getElementById('successMsg' + index);
+                successMsg.style.display = 'block';
+                subjectInput.value = '';
+                messageInput.value = '';
+                setTimeout(() => { successMsg.style.display = 'none'; }, 3000);
+            } catch (err) {
+                alert('Gửi thất bại: ' + (err.data?.message || err.message));
+            }
+        };
+    });</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết bài tập | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .assignment-detail { padding: 20px; background: white; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px; }
+        .assignment-header { border-bottom: 2px solid #0056b3; padding-bottom: 14px; margin-bottom: 14px; }
+        .assignment-header h2 { color: #0056b3; margin-bottom: 8px; }
+        .assignment-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 14px; }
+        .meta-item { padding: 10px; background: #f0f5ff; border-radius: 6px; }
+        .meta-item strong { display: block; font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+        .meta-item span { display: block; font-size: 15px; color: #0056b3; font-weight: 600; }
+        .score-badge { display: inline-block; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 16px; }
+        .score-excellent { background: #e3f2fd; color: #1565c0; }
+        .score-good { background: #e8f5e9; color: #2e7d32; }
+        .score-fair { background: #fff3e0; color: #e65100; }
+        .submission-section { padding: 16px; background: #f9f9f9; border-radius: 8px; margin-bottom: 14px; }
+        .submission-section h4 { margin-bottom: 10px; color: #333; }
+        .feedback-box { padding: 12px; background: #e3f2fd; border-left: 4px solid #1976d2; border-radius: 4px; margin: 10px 0; }
+        .status-label { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-submitted { background: #d1ecf1; color: #0c5460; }
+        .status-graded { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Phụ huynh</div></div></div>
+            <div class="dashboard-nav"><a href="parent-results.html">Quay lại kết quả</a><a href="parent-dashboard.html">Cổng phụ huynh</a><a href="index.html">Trang chủ</a><a href="index.html" id="assignmentDetailLogout">Đăng xuất</a></div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>Chi tiết bài tập</h1><p class="dashboard-subtitle">Xem thông tin bài tập và kết quả nộp bài của con em.</p></div></div>
+            <section class="section-card">
+                <div id="assignmentDetail"></div>
+            </section>
+        </main>
+    </div>
+    <script>document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('parent', 'login.html')) return;
+        GeoConnectApp.bindLogout('#assignmentDetailLogout');
+
+        const params = new URLSearchParams(window.location.search);
+        const assignmentId = params.get('id');
+        const studentUsername = params.get('student') || (await GeoConnectApp.getParentSession()).selectedStudentUsername;
+        const detailDiv = document.getElementById('assignmentDetail');
+
+        if (!assignmentId || !studentUsername) {
+            detailDiv.innerHTML = '<p style="text-align:center; color:#666;">Không tìm thấy bài tập</p>';
+            return;
+        }
+
+        let assignment, subs;
+        try {
+            [assignment, subs] = await Promise.all([
+                GeoConnectApp.getAssignmentById(assignmentId),
+                GeoConnectApp.getStudentSubmissions(studentUsername, assignmentId),
+            ]);
+        } catch (err) {
+            detailDiv.innerHTML = '<p style="text-align:center; color:#666;">Bạn không có quyền xem bài tập này</p>';
+            return;
+        }
+        const submission = subs && subs[0];
+
+        if (!assignment) {
+            detailDiv.innerHTML = '<p style="text-align:center; color:#666;">Bài tập không tồn tại</p>';
+            return;
+        }
+
+        const dueDate = assignment.dueAt ? new Date(assignment.dueAt).toLocaleDateString('vi-VN') : '-';
+
+        let html = '<div class="assignment-detail">';
+        html += '<div class="assignment-header"><h2>' + assignment.title + '</h2><p class="small-note">' + (assignment.description || 'Không có mô tả') + '</p></div>';
+        html += '<div class="assignment-meta">';
+        html += '<div class="meta-item"><strong>Loại bài tập</strong><span>' + (assignment.type === 'quiz' ? 'Trắc nghiệm' : 'Thực hành') + '</span></div>';
+        html += '<div class="meta-item"><strong>Số câu hỏi</strong><span>' + ((assignment.questions || []).length || '-') + '</span></div>';
+        html += '<div class="meta-item"><strong>Hạn nộp</strong><span>' + dueDate + '</span></div>';
+        html += '</div>';
+
+        html += '<h3 style="margin-bottom: 12px;">Thông tin nộp bài:</h3>';
+
+        if (!submission) {
+            html += '<div class="submission-section"><h4>Trạng thái nộp bài</h4><span class="status-label status-pending">CHƯA NỘP</span><p style="margin-top: 10px; color: #666;">Con em bạn chưa nộp bài tập này. Vui lòng nhắc nhở con hoàn thành bài trong thời gian quy định.</p></div>';
+        } else {
+            const submittedDate = new Date(submission.submittedAt).toLocaleDateString('vi-VN');
+            const submittedTime = new Date(submission.submittedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            html += '<div class="submission-section"><h4>Thông tin nộp bài</h4><p><strong>Ngày nộp:</strong> ' + submittedDate + ', ' + submittedTime + '</p>';
+            if (submission.score != null) {
+                const scoreClass = parseFloat(submission.score) >= 8.5 ? 'score-excellent' : (parseFloat(submission.score) >= 7 ? 'score-good' : 'score-fair');
+                html += '<p style="margin-top: 10px;"><strong>Điểm:</strong> <span class="score-badge ' + scoreClass + '">' + submission.score + '/10</span></p>';
+                if (submission.gradedAt) html += '<p><strong>Ngày chấm:</strong> ' + new Date(submission.gradedAt).toLocaleDateString('vi-VN') + '</p>';
+                html += '<span class="status-label status-graded">ĐÃ CHẤM</span>';
+                if (submission.feedback) {
+                    html += '<div class="feedback-box"><strong>Nhận xét từ giáo viên:</strong><p style="margin-top: 6px;">' + submission.feedback + '</p></div>';
+                }
+            } else {
+                html += '<p style="margin-top: 10px;"><span class="status-label status-submitted">ĐÃ NỘP</span></p><p style="color: #666; margin-top: 10px;">Bài làm đã được nộp và đang chờ giáo viên chấm điểm.</p>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+        detailDiv.innerHTML = html;
+    });</script>
+</body>
+</html>

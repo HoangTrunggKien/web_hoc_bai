@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả học tập | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .detail-table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        .detail-table tr { border-bottom: 1px solid #eee; }
+        .detail-table th, .detail-table td { padding: 12px 10px; text-align: left; }
+        .detail-table th { background: #f0f5ff; font-weight: 600; }
+        .score-badge { display: inline-block; min-width: 50px; padding: 6px 12px; border-radius: 6px; text-align: center; font-weight: 600; }
+        .score-excellent { background: #e3f2fd; color: #1565c0; }
+        .score-good { background: #e8f5e9; color: #2e7d32; }
+        .score-fair { background: #fff3e0; color: #e65100; }
+        .score-low { background: #ffebee; color: #d32f2f; }
+        .result-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
+        .result-card:hover { box-shadow: 0 2px 8px rgba(142, 68, 173, 0.1); }
+        .result-header { display: flex; justify-content: space-between; align-items: start; }
+        .result-title { flex: 1; }
+        .result-title h3 { margin: 0 0 4px 0; color: #333; }
+        .result-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+        .result-meta-item { font-size: 12px; color: #666; display: flex; align-items: center; gap: 4px; }
+        .result-score { text-align: right; }
+        .result-score strong { display: block; font-size: 20px; margin-bottom: 4px; }
+        .mini-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+        .mini-stat { text-align: center; padding: 16px; background: white; border: 1px solid #eee; border-radius: 12px; }
+        .mini-stat strong { display: block; font-size: 28px; color: #8e44ad; margin-bottom: 4px; }
+        .mini-stat span { display: block; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Học sinh</div></div></div><div class="dashboard-nav"><a href="student-home.html">Quay lại cổng học sinh</a><a href="index.html">Trang chủ</a><a href="index.html" id="studentResultsLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>Kết quả học tập</h1><p class="dashboard-subtitle">Xem điểm số chi tiết và tiến độ của từng bài tập.</p></div></div>
+            <section class="section-card">
+                <h3 style="margin-bottom: 16px;">Tổng kết học tập</h3>
+                <div class="mini-stat-grid" id="statsGrid"></div>
+            </section>
+            <section class="section-card" id="resultsList">
+                <h3 style="margin-bottom: 16px;">Chi tiết từng bài tập</h3>
+                <div id="resultsContent"></div>
+            </section>
+            <section class="section-card" id="detailView" style="display:none;">
+                <button class="btn-outline" id="btnBackResults" style="margin-bottom: 16px;">← Quay lại danh sách</button>
+                <div id="detailContent"></div>
+            </section>
+        </main>
+    </div>
+    <script>
+    let _allResults = [];
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('student', 'login.html')) return;
+        GeoConnectApp.bindLogout('#studentResultsLogout');
+
+        const user = await GeoConnectApp.getCurrentUser();
+        const statsGrid = document.getElementById('statsGrid');
+        const resultsContent = document.getElementById('resultsContent');
+        const resultsList = document.getElementById('resultsList');
+        const detailView = document.getElementById('detailView');
+        const detailContent = document.getElementById('detailContent');
+        const btnBackResults = document.getElementById('btnBackResults');
+
+        const studentClasses = await GeoConnectApp.getStudentClasses(user.username);
+        const allSubmissions = await GeoConnectApp.getStudentSubmissions(user.username);
+
+        let totalAssignments = 0, totalCompleted = 0, totalScoreSum = 0, gradedCount = 0;
+        _allResults = [];
+
+        for (const cls of studentClasses) {
+            const assignments = await GeoConnectApp.getAssignments(cls.id);
+            totalAssignments += assignments.length;
+            assignments.forEach(a => {
+                const submission = allSubmissions.find(s => s.assignmentId === a.id) || null;
+                if (submission) {
+                    totalCompleted += 1;
+                    if (submission.score != null) {
+                        totalScoreSum += Number(submission.score);
+                        gradedCount += 1;
+                    }
+                }
+                _allResults.push({
+                    assignmentId: a.id,
+                    classId: cls.id,
+                    title: a.title,
+                    className: cls.name,
+                    submission,
+                    dueDate: a.dueAt ? new Date(a.dueAt).toLocaleDateString('vi-VN') : 'N/A',
+                });
+            });
+        }
+
+        const overallCompletion = totalAssignments > 0 ? Math.round((totalCompleted / totalAssignments) * 100) : 0;
+        const overallScore = gradedCount > 0 ? (totalScoreSum / gradedCount).toFixed(1) : 'N/A';
+
+        statsGrid.innerHTML = '<div class="mini-stat"><strong>' + overallCompletion + '%</strong><span class="small-note">Tiến độ học tập</span></div><div class="mini-stat"><strong>' + overallScore + '</strong><span class="small-note">Điểm trung bình</span></div><div class="mini-stat"><strong>' + totalCompleted + '/' + totalAssignments + '</strong><span class="small-note">Nhiệm vụ hoàn thành</span></div>';
+
+        const resultsHtml = _allResults.map((result, idx) => {
+            const scoreClass = result.submission && result.submission.score != null ? (result.submission.score >= 8 ? 'score-excellent' : (result.submission.score >= 6 ? 'score-good' : 'score-fair')) : '';
+            const statusIcon = result.submission ? (result.submission.score != null ? '✓' : '📤') : '⏳';
+            const statusText = result.submission ? (result.submission.score != null ? 'Đã chấm' : 'Đã nộp') : 'Chưa nộp';
+            return '<div class="result-card" onclick="showDetail(' + idx + ')"><div class="result-header"><div class="result-title"><h3>' + result.title + '</h3><div class="result-meta"><div class="result-meta-item">📚 ' + result.className + '</div><div class="result-meta-item">📅 ' + result.dueDate + '</div></div></div><div class="result-score"><strong class="' + scoreClass + '">' + (result.submission && result.submission.score != null ? result.submission.score : '-') + '</strong><div class="score-badge" style="text-align:center; padding:4px 8px; font-size:12px;">' + statusIcon + ' ' + statusText + '</div></div></div></div>';
+        }).join('');
+
+        resultsContent.innerHTML = resultsHtml || '<p style="text-align:center; color:#666; padding:20px;">Bạn chưa có kết quả nào</p>';
+
+        window.showDetail = function(idx) {
+            const result = _allResults[idx];
+            if (!result) return;
+            const submission = result.submission;
+            let detailHtml = '<h2 style="color:#8e44ad; margin-top:0;">' + result.title + '</h2><p class="small-note">Lớp: ' + result.className + '</p>';
+            if (!submission) {
+                detailHtml += '<p style="padding:20px; text-align:center; background:#fff3cd; border-radius:8px; color:#856404;">Bạn chưa nộp bài tập này</p>';
+            } else {
+                detailHtml += '<div style="background:white; border:1px solid #eee; border-radius:12px; padding:16px; margin:16px 0;">';
+                detailHtml += '<h3 style="margin-top:0; color:#333;">Thông tin nộp bài</h3>';
+                detailHtml += '<table class="detail-table"><tr><td><strong>Ngày nộp:</strong></td><td>' + (submission.submittedAt ? new Date(submission.submittedAt).toLocaleString('vi-VN') : 'N/A') + '</td></tr><tr><td><strong>Trạng thái chấm:</strong></td><td>' + (submission.score != null ? '✓ Đã chấm' : '⏳ Chờ chấm') + '</td></tr>';
+                if (submission.score != null) {
+                    const scoreClass = submission.score >= 8 ? 'score-excellent' : (submission.score >= 6 ? 'score-good' : 'score-fair');
+                    detailHtml += '<tr><td><strong>Điểm:</strong></td><td><span class="score-badge ' + scoreClass + '">' + submission.score + '</span></td></tr>';
+                }
+                if (submission.feedback) {
+                    detailHtml += '<tr><td><strong>Nhận xét:</strong></td><td style="color:#666; font-style:italic;">' + submission.feedback + '</td></tr>';
+                }
+                detailHtml += '</table></div>';
+            }
+            detailContent.innerHTML = detailHtml;
+            resultsList.style.display = 'none';
+            detailView.style.display = 'block';
+            window.scrollTo(0, 0);
+        };
+
+        btnBackResults.addEventListener('click', function() {
+            resultsList.style.display = 'block';
+            detailView.style.display = 'none';
+        });
+    });</script>
+</body>
+</html>

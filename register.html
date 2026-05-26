@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký tài khoản | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body class="auth-page">
+
+    <div class="auth-card">
+        <img src="logo.png" alt="Logo">
+        
+        <h2>Tạo tài khoản mới</h2>
+        <p>Khởi tạo tài khoản demo theo đúng vai trò sử dụng trong hệ thống</p>
+        
+        <form id="registerForm" class="auth-form">
+            <div class="input-group">
+                <label>Họ và tên</label>
+                <input type="text" id="fullname" placeholder="Nhập tên của bạn..." required>
+            </div>
+            
+            <div class="input-group">
+                <label>Email hoặc số điện thoại</label>
+                <input type="text" id="contact" placeholder="Dùng làm tên đăng nhập..." required>
+            </div>
+            
+            <div class="input-group">
+                <label>Bạn tham gia với tư cách là:</label>
+                <select id="role">
+                    <option value="student">Học sinh lớp 6</option>
+                    <option value="teacher">Giáo viên Địa lý</option>
+                    <option value="parent">Phụ huynh học sinh</option>
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label>Mật khẩu</label>
+                <input type="password" id="password" placeholder="Tạo mật khẩu (ít nhất 6 ký tự)" required>
+            </div>
+            
+            <div class="auth-actions">
+                <button type="submit" class="btn-success" id="submitReg">TẠO TÀI KHOẢN</button>
+                <a href="login.html" class="btn-soft">Đã có tài khoản? Đăng nhập</a>
+                <a href="index.html" class="btn-outline">Quay lại trang chủ</a>
+            </div>
+        </form>
+        
+        <div class="login-link">
+            Đã có tài khoản? <a href="login.html">Đăng nhập tại đây</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const fullName = document.getElementById('fullname').value.trim();
+            const contact = document.getElementById('contact').value.trim();
+            const role = document.getElementById('role').value;
+            const password = document.getElementById('password').value.trim();
+
+            if (!fullName || !contact || !password) {
+                alert('Vui lòng điền đầy đủ thông tin để tạo tài khoản!');
+                return;
+            }
+
+            if (password.length < 6) {
+                alert('Mật khẩu phải có ít nhất 6 ký tự.');
+                return;
+            }
+
+            const btn = document.getElementById('submitReg');
+            if (btn) { btn.disabled = true; btn.textContent = 'Đang tạo...'; }
+            const result = await GeoConnectApp.registerAccount({ fullName, contact, role, password });
+            if (btn) { btn.disabled = false; btn.textContent = 'TẠO TÀI KHOẢN'; }
+
+            if (!result.ok) {
+                alert(result.message);
+                return;
+            }
+
+            // registerAccount đã set cookie session — logout để buộc đăng nhập lại với vai trò đúng
+            await GeoConnectApp.logout();
+
+            let successMsg = 'Đã tạo tài khoản cho ' + fullName + '.\nTên đăng nhập: ' + contact + '\nVai trò: ' + GeoConnectApp.getRoleLabel(role);
+            if (role === 'student' && result.user.studentCode) {
+                successMsg += '\n\n📌 MÃ HỌC SINH: ' + result.user.studentCode + '\n(Chia sẻ mã này với phụ huynh để họ theo dõi bạn)';
+            }
+            successMsg += '\n\nHệ thống sẽ chuyển sang trang đăng nhập.';
+            alert(successMsg);
+            window.location.href = 'login.html';
+        });
+    </script>
+
+</body>
+</html>

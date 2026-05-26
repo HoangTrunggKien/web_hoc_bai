@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body class="auth-page">
+
+    <div class="auth-card">
+        <img src="logo.png" alt="Logo">
+        
+        <h2>Chào mừng trở lại!</h2>
+        <p>Đăng nhập theo đúng vai trò để vào cổng chức năng phù hợp</p>
+
+        <form id="loginForm" class="auth-form">
+            <div class="input-group">
+                <label>Tên đăng nhập / email / số điện thoại</label>
+                <input type="text" id="username" placeholder="Nhập tên đăng nhập..." required>
+            </div>
+            <div class="input-group">
+                <label>Mật khẩu</label>
+                <input type="password" id="password" placeholder="Mật khẩu" required>
+            </div>
+            <div class="input-group">
+                <label>Vai trò</label>
+                <select id="role">
+                    <option value="any">Tự động theo tài khoản</option>
+                    <option value="student">Học sinh</option>
+                    <option value="teacher">Giáo viên</option>
+                    <option value="parent">Phụ huynh</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            
+            <div class="auth-actions">
+                <button type="submit" class="btn-primary" id="btnLogin">VÀO HỆ THỐNG</button>
+                <a href="index.html" class="btn-soft">Quay lại trang chủ</a>
+            </div>
+        </form>
+
+        <div class="reg-link">
+            Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a>
+        </div>
+    </div>
+
+   <script>
+    async function handleLogin(event) {
+        event.preventDefault();
+
+        if (typeof GeoConnectApp === 'undefined') {
+            alert('Ứng dụng đang tải, vui lòng chờ...');
+            return;
+        }
+
+        const user = document.getElementById('username').value.trim();
+        const pass = document.getElementById('password').value.trim();
+        const role = document.getElementById('role').value;
+
+        if (!user || !pass) {
+            alert('Vui lòng không để trống thông tin!');
+            return;
+        }
+
+        const btn = document.getElementById('btnLogin');
+        if (btn) { btn.disabled = true; btn.textContent = 'Đang đăng nhập...'; }
+        const result = await GeoConnectApp.authenticate(user, pass, role);
+        if (btn) { btn.disabled = false; btn.textContent = 'VÀO HỆ THỐNG'; }
+
+        if (!result.ok) {
+            alert(result.message + '\n\nTài khoản mẫu:\n- admin / 123456\n- giaovien01 / 123\n- phuhuynh01 / 123\n- hocsinh01 / 123');
+            return;
+        }
+
+        alert('Đăng nhập thành công với vai trò ' + GeoConnectApp.getRoleLabel(result.user.role) + '!');
+        window.location.href = GeoConnectApp.getRoleHome(result.user.role);
+    }
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        // Nếu đã đăng nhập rồi, redirect thẳng vào cổng theo vai trò để tránh
+        // user tưởng nhầm là đã bị thoát.
+        if (typeof GeoConnectApp !== 'undefined') {
+            try {
+                const me = await GeoConnectApp.getCurrentUser();
+                if (me && me.role) {
+                    window.location.replace(GeoConnectApp.getRoleHome(me.role));
+                    return;
+                }
+            } catch { /* ignore — vẫn cho hiện form */ }
+        }
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', handleLogin);
+        }
+    });
+</script>
+
+</body>
+</html>

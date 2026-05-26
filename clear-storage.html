@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xóa dữ liệu</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .container { text-align: center; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { color: #8e44ad; margin-bottom: 20px; }
+        p { color: #666; margin-bottom: 20px; font-size: 16px; }
+        .status { padding: 16px; background: #d4edda; color: #155724; border-radius: 8px; margin: 20px 0; }
+        a { display: inline-block; margin-top: 20px; padding: 12px 24px; background: #8e44ad; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; }
+        a:hover { background: #7d3c98; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗑️ Xóa dữ liệu</h1>
+        <p>Trang này sẽ xóa tất cả dữ liệu lưu trữ và tải lại trang chủ...</p>
+        <div class="status" id="status">Đang xóa...</div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function() {
+            // Xóa tất cả localStorage keys cố định
+            localStorage.removeItem('geoconnect_users');
+            localStorage.removeItem('geoconnect_current_user');
+            localStorage.removeItem('geoconnect_classes');
+            localStorage.removeItem('geoconnect_enrollments');
+            localStorage.removeItem('geoconnect_assignments');
+            localStorage.removeItem('geoconnect_submissions');
+            localStorage.removeItem('geoconnect_lessons');
+            localStorage.removeItem('geoconnect_notifications');
+            localStorage.removeItem('geoconnect_audit_log');
+            localStorage.removeItem('geoconnect_parent_students');
+            localStorage.removeItem('geoconnect_class_posts');
+
+            // Xóa tất cả keys động (parent_setup_*, GeoConnect_*, v.v)
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('parent_setup_') || key.startsWith('GeoConnect_')) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+
+            document.getElementById('status').innerHTML = '✓ Đã xóa dữ liệu thành công!<br><br>Đang chuyển hướng...';
+            
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1500);
+        });
+    </script>
+</body>
+</html>

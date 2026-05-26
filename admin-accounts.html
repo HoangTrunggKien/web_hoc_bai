@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý tài khoản | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d6e0ec;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .btn-modal {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .btn-primary-modal {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary-modal:hover {
+            background: #0056b3;
+        }
+        .btn-secondary-modal {
+            background: #e9ecef;
+            color: #333;
+        }
+        .btn-secondary-modal:hover {
+            background: #dee2e6;
+        }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Admin</div></div></div><div class="dashboard-nav"><a href="dashboard.html">Quay lại cổng admin</a><a href="index.html">Trang chủ</a><a href="index.html" id="adminAccountsLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content"><div class="dashboard-topbar"><div><h1>Quản lý tài khoản</h1><p class="dashboard-subtitle">Tạo, sửa, xóa tài khoản và phân quyền người dùng.</p></div></div><section class="section-card"><div class="input-group" style="margin-bottom:14px;"><label>Lọc theo vai trò</label><select id="roleFilter" style="width:100%; padding:12px 14px; border:1px solid #d6e0ec; border-radius:12px;"><option value="">-- Tất cả --</option><option value="admin">Admin</option><option value="teacher">Giáo viên</option><option value="parent">Phụ huynh</option><option value="student">Học sinh</option></select></div><div class="table-wrap"><table class="data-table" id="accountsTable"><thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Mã học sinh</th><th>Hành động</th></tr></thead><tbody id="accountsBody"></tbody></table></div></section></main>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal-overlay" id="editUserModal">
+        <div class="modal-content">
+            <div class="modal-header">Chỉnh sửa tài khoản</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Tên người dùng (không thể sửa)</label>
+                    <input type="text" id="editUsername" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Họ tên</label>
+                    <input type="text" id="editFullName" placeholder="Nhập họ tên">
+                </div>
+                <div class="form-group">
+                    <label>Email / Liên hệ</label>
+                    <input type="text" id="editContact" placeholder="Nhập email hoặc liên hệ">
+                </div>
+                <div class="form-group">
+                    <label>Vai trò</label>
+                    <select id="editRole">
+                        <option value="admin">Admin</option>
+                        <option value="teacher">Giáo viên</option>
+                        <option value="parent">Phụ huynh</option>
+                        <option value="student">Học sinh</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal btn-secondary-modal" onclick="closeEditModal()">Hủy</button>
+                <button class="btn-modal btn-primary-modal" onclick="saveUserChanges()">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentEditUsername = null;
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (!await GeoConnectApp.ensureRoleAccess('admin', 'login.html')) return;
+            GeoConnectApp.bindLogout('#adminAccountsLogout');
+
+            const roleFilter = document.getElementById('roleFilter');
+            const accountsBody = document.getElementById('accountsBody');
+            let cachedUsers = [];
+
+            async function loadAccounts() {
+                cachedUsers = await GeoConnectApp.getAllUsers();
+                const filter = roleFilter.value;
+                const users = filter ? cachedUsers.filter(u => u.role === filter) : cachedUsers;
+
+                accountsBody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>${user.fullName}</td>
+                        <td>${user.contact || ''}</td>
+                        <td><span class="badge badge-info">${GeoConnectApp.getRoleLabel(user.role)}</span></td>
+                        <td>${user.role === 'student' ? (user.studentCode ? '<strong style="color: #007bff;">' + user.studentCode + '</strong>' : '-') : '-'}</td>
+                        <td>
+                            <button class="btn-outline" onclick="editUser('${user.username}')">Sửa</button>
+                            ${user.username !== 'admin' ? '<button class="btn-danger" onclick="deleteUserConfirm(\'' + user.username + '\')">Xóa</button>' : ''}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            window.editUser = function(username) {
+                const user = cachedUsers.find(u => u.username === username);
+                if (!user) return;
+                currentEditUsername = username;
+                document.getElementById('editUsername').value = user.username;
+                document.getElementById('editFullName').value = user.fullName;
+                document.getElementById('editContact').value = user.contact || '';
+                document.getElementById('editRole').value = user.role;
+                document.getElementById('editUserModal').classList.add('active');
+            };
+
+            window.closeEditModal = function() {
+                document.getElementById('editUserModal').classList.remove('active');
+                currentEditUsername = null;
+            };
+
+            window.saveUserChanges = async function() {
+                if (!currentEditUsername) return;
+                const fullName = document.getElementById('editFullName').value.trim();
+                const contact = document.getElementById('editContact').value.trim();
+                if (!fullName || !contact) { alert('Vui lòng điền đầy đủ thông tin!'); return; }
+                try {
+                    await GeoConnectApp.updateUser(currentEditUsername, { fullName, contact });
+                    alert('Cập nhật tài khoản thành công!');
+                    closeEditModal();
+                    await loadAccounts();
+                } catch (err) {
+                    alert('Cập nhật thất bại: ' + (err.message || ''));
+                }
+            };
+
+            window.deleteUserConfirm = async function(username) {
+                const user = cachedUsers.find(u => u.username === username);
+                if (!user) return;
+                if (confirm('Bạn có chắc chắn muốn xóa tài khoản "' + user.fullName + '"?\nHành động này không thể hoàn tác!')) {
+                    try {
+                        await GeoConnectApp.deleteUser(username);
+                        alert('Xóa tài khoản thành công');
+                        await loadAccounts();
+                    } catch (err) { alert('Xóa thất bại: ' + (err.message || '')); }
+                }
+            };
+
+            document.getElementById('editUserModal').addEventListener('click', function(e) {
+                if (e.target === this) closeEditModal();
+            });
+
+            await loadAccounts();
+            roleFilter.addEventListener('change', loadAccounts);
+        });
+    </script>
+</body>
+</html>

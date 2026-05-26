@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài tập sắp tới | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .assignment-card { padding: 14px; background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .assignment-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .assignment-info { flex: 1; }
+        .assignment-info h4 { margin-bottom: 4px; }
+        .assignment-meta { display: flex; gap: 10px; font-size: 12px; color: #666; margin-top: 6px; }
+        .assignment-badge { padding: 4px 8px; background: #f0f5ff; border-radius: 4px; }
+        .due-soon { border-left: 4px solid #f39c12; }
+        .overdue { border-left: 4px solid #e74c3c; }
+        .status-upcoming { display: inline-block; padding: 4px 10px; background: #d1ecf1; color: #0c5460; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .status-submitted { display: inline-block; padding: 4px 10px; background: #d4edda; color: #155724; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .filter-group { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+        .filter-btn { padding: 8px 14px; border: 1px solid #ddd; border-radius: 6px; background: white; cursor: pointer; transition: all 0.3s; font-size: 13px; }
+        .filter-btn.active { background: #0056b3; color: white; border-color: #0056b3; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Phụ huynh</div></div></div>
+            <div class="dashboard-nav"><a href="parent-dashboard.html">Quay lại cổng phụ huynh</a><a href="index.html">Trang chủ</a><a href="index.html" id="upcomingLogout">Đăng xuất</a></div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>Bài tập sắp tới</h1><p class="dashboard-subtitle">Danh sách các bài tập chưa hoàn thành sắp dến hạn.</p></div></div>
+            <section class="section-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label>Học sinh</label>
+                        <div style="padding: 12px 14px; background: #f8f9fa; border-radius: 12px; font-weight: 500;" id="studentDisplayArea">--</div>
+                    </div>
+                    <a href="parent-setup.html" style="padding: 10px 14px; background: #e9ecef; border-radius: 6px; text-decoration: none; color: #333; font-size: 13px; margin-top: 24px;">Đổi học sinh</a>
+                </div>
+                <div class="filter-group">
+                    <button class="filter-btn active" data-filter="all">Tất cả</button>
+                    <button class="filter-btn" data-filter="upcoming">Sắp tới</button>
+                    <button class="filter-btn" data-filter="overdue">Quá hạn</button>
+                    <button class="filter-btn" data-filter="submitted">Đã nộp</button>
+                </div>
+                <div id="assignmentsList"></div>
+            </section>
+        </main>
+    </div>
+    <script>
+    let _allAssignments = [];
+    let currentFilter = 'all';
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('parent', 'login.html')) return;
+        GeoConnectApp.bindLogout('#upcomingLogout');
+
+        const session = await GeoConnectApp.getParentSession();
+        if (!session.selectedStudentUsername) { window.location.href = 'parent-setup.html'; return; }
+        const studentUsername = session.selectedStudentUsername;
+
+        document.getElementById('studentDisplayArea').textContent = session.selectedStudent ? session.selectedStudent.fullName + ' (' + studentUsername + ')' : '--';
+
+        const studentClasses = await GeoConnectApp.getStudentClasses(studentUsername);
+        const allSubs = await GeoConnectApp.getStudentSubmissions(studentUsername);
+
+        for (const cls of studentClasses) {
+            const assignments = await GeoConnectApp.getAssignments(cls.id);
+            assignments.forEach(a => {
+                const submission = allSubs.find(s => s.assignmentId === a.id) || null;
+                const dueAt = a.dueAt ? new Date(a.dueAt) : null;
+                const now = new Date();
+                const isOverdue = dueAt && dueAt < now && !submission;
+                const isSubmitted = !!submission;
+                const daysUntil = dueAt ? Math.ceil((dueAt.getTime() - now.getTime()) / (1000*60*60*24)) : null;
+                _allAssignments.push({
+                    ...a,
+                    className: cls.name,
+                    submission, daysUntil, isOverdue, isSubmitted,
+                    status: isOverdue ? 'overdue' : (isSubmitted ? 'submitted' : 'upcoming'),
+                });
+            });
+        }
+
+        renderAssignments();
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.getAttribute('data-filter');
+                renderAssignments();
+            });
+        });
+    });
+
+    function renderAssignments() {
+        const assignmentsList = document.getElementById('assignmentsList');
+        let filtered = currentFilter === 'all' ? _allAssignments : _allAssignments.filter(a => a.status === currentFilter);
+        filtered = filtered.slice().sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
+        if (!filtered.length) {
+            assignmentsList.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">Không có bài tập nào</p>';
+            return;
+        }
+        let html = '';
+        filtered.forEach(a => {
+            const dueDate = a.dueAt ? new Date(a.dueAt).toLocaleDateString('vi-VN') : '-';
+            const statusClass = a.isOverdue ? 'overdue' : (a.isSubmitted ? '' : 'due-soon');
+            const statusLabel = a.isOverdue ? '<span style="color:#e74c3c; font-weight:600;">QUÁ HẠN</span>' : (a.isSubmitted ? '<span class="status-submitted">ĐÃ NỘP</span>' : '<span class="status-upcoming">SẮP TỚI</span>');
+            const daysText = a.daysUntil == null ? '-' : (a.daysUntil > 0 ? 'Còn ' + a.daysUntil + ' ngày' : 'Quá hạn ' + Math.abs(a.daysUntil) + ' ngày');
+            const detailLink = 'parent-assignment-detail.html?id=' + a.id;
+            html += '<div class="assignment-card ' + statusClass + '" onclick="window.location.href=\'' + detailLink + '\'" style="cursor:pointer;">';
+            html += '<div class="assignment-info"><h4 style="color:#0056b3;">' + a.title + '</h4>';
+            html += '<div class="assignment-meta"><span class="assignment-badge">' + a.className + '</span><span class="assignment-badge">' + (a.type === 'quiz' ? 'Trắc nghiệm' : 'Thực hành') + '</span><span style="color:#666;">📅 ' + dueDate + '</span><span style="color:' + ((a.daysUntil != null && a.daysUntil < 3) ? '#e74c3c' : '#666') + '">⏰ ' + daysText + '</span></div></div>';
+            html += '<div style="text-align:right;">' + statusLabel + '</div></div>';
+        });
+        document.getElementById('assignmentsList').innerHTML = html;
+    }
+    </script>
+</body>
+</html>

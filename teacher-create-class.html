@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo lớp học | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .class-card { background: white; border: 2px solid #eee; border-radius: 8px; padding: 20px; margin-bottom: 16px; cursor: pointer; transition: all 0.3s; }
+        .class-card:hover { border-color: #27ae60; box-shadow: 0 6px 12px rgba(39, 174, 96, 0.15); transform: translateY(-2px); }
+        .class-card-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+        .class-card-title { font-size: 18px; font-weight: 600; color: #27ae60; }
+        .class-card-meta { display: flex; gap: 16px; margin: 12px 0; font-size: 14px; color: #666; }
+        .class-card-btn { display: inline-block; padding: 8px 16px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px; }
+        .class-card-btn:hover { background: #7d3a96; }
+        .class-card-btn-danger { background: #e74c3c; }
+        .class-card-btn-danger:hover { background: #c0392b; }
+        .class-card-btn-info { background: #3498db; }
+        .class-card-btn-info:hover { background: #2980b9; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-title { font-size: 20px; font-weight: 600; color: #333; margin-bottom: 16px; }
+        .form-group { display: flex; flex-direction: column; margin-bottom: 16px; }
+        .form-group label { font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px; }
+        .form-group input, .form-group textarea { padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .modal-buttons { display: flex; gap: 8px; margin-top: 20px; }
+        .modal-buttons button { flex: 1; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .btn-save { background: #27ae60; color: white; }
+        .btn-save:hover { background: #229954; }
+        .btn-cancel { background: #bdc3c7; color: #333; }
+        .btn-cancel:hover { background: #95a5a6; }
+        .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .empty-state { text-align: center; padding: 40px; color: #999; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand">
+                <img src="logo.png" alt="GeoConnect 6">
+                <div>
+                    <strong>GeoConnect 6</strong>
+                    <div class="small-note">Giáo viên</div>
+                </div>
+            </div>
+            <div class="dashboard-nav">
+                <a href="teacher-dashboard.html">Quay lại cổng giáo viên</a>
+                <a href="index.html">Trang chủ</a>
+                <a href="index.html" id="teacherCreateClassLogout">Đăng xuất</a>
+            </div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar">
+                <div>
+                    <h1>Tạo lớp học</h1>
+                    <p class="dashboard-subtitle">Khởi tạo lớp mới và bắt đầu quản lý lớp học của bạn.</p>
+                </div>
+            </div>
+            <section class="section-card">
+                <div class="contact-grid">
+                    <div class="contact-card">
+                        <h3 style="margin-top:0; color:#27ae60;">Tạo lớp học mới</h3>
+                        <div class="input-group"><label>Tên lớp</label><input type="text" id="className" placeholder="Ví dụ: Địa lý 6D - Kỹ năng bản đồ"></div>
+                        <div class="input-group"><label>Mã lớp</label><input type="text" id="classCode" placeholder="Ví dụ: GEO6D2025"></div>
+                        <div class="input-group"><label>Mô tả</label><input type="text" id="classDesc" placeholder="Mục tiêu, nội dung, ghi chú"></div>
+                        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                            <button class="btn-primary" id="btnCreate">✚ Tạo lớp</button>
+                            <button class="btn-outline" id="btnShowClasses">📋 Xem lớp đã tạo</button>
+                        </div>
+                    </div>
+                    <div class="mini-stat-grid">
+                        <div class="mini-stat"><strong id="classCount">0</strong><span class="small-note">Lớp đã tạo</span></div>
+                        <div class="mini-stat"><strong id="studentCount">0</strong><span class="small-note">Học sinh tham gia</span></div>
+                        <div class="mini-stat"><strong id="assignmentCount">0</strong><span class="small-note">Bài tập đã giao</span></div>
+                    </div>
+                </div>
+            </section>
+            <section class="section-card" id="classesListSection" style="display:none;">
+                <h3 style="margin-bottom:16px;">📚 Các lớp của tôi</h3>
+                <div id="alertContainer"></div>
+                <div id="classList"></div>
+                <button class="btn-outline" id="btnBackCreate" style="margin-top:16px;">⬅️ Quay lại</button>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal chỉnh sửa lớp -->
+    <div class="modal" id="editClassModal">
+        <div class="modal-content">
+            <div class="modal-title">Chỉnh sửa lớp học</div>
+            <form id="editClassForm">
+                <input type="hidden" id="editClassId">
+                <div class="form-group">
+                    <label>Tên lớp</label>
+                    <input type="text" id="editClassName" required>
+                </div>
+                <div class="form-group">
+                    <label>Mã lớp</label>
+                    <input type="text" id="editClassCode" required>
+                </div>
+                <div class="form-group">
+                    <label>Mô tả</label>
+                    <textarea id="editClassDesc" rows="3"></textarea>
+                </div>
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-save">Lưu thay đổi</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal('editClassModal')">Hủy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('teacher', 'login.html')) return;
+        GeoConnectApp.bindLogout('#teacherCreateClassLogout');
+
+        const user = await GeoConnectApp.getCurrentUser();
+        const className = document.getElementById('className');
+        const classCode = document.getElementById('classCode');
+        const classDesc = document.getElementById('classDesc');
+        const btnCreate = document.getElementById('btnCreate');
+        const btnShowClasses = document.getElementById('btnShowClasses');
+        const btnBackCreate = document.getElementById('btnBackCreate');
+        const classesListSection = document.getElementById('classesListSection');
+        const classList = document.getElementById('classList');
+        const classCountEl = document.getElementById('classCount');
+        const studentCountEl = document.getElementById('studentCount');
+        const assignmentCountEl = document.getElementById('assignmentCount');
+
+        async function updateStats() {
+            const allClasses = await GeoConnectApp.getTeacherClasses(user.username);
+            classCountEl.textContent = allClasses.length;
+            const counts = await Promise.all(allClasses.map(async cls => {
+                const [students, assignments] = await Promise.all([
+                    GeoConnectApp.getClassStudents(cls.id),
+                    GeoConnectApp.getAssignments(cls.id),
+                ]);
+                return { s: students.length, a: assignments.length };
+            }));
+            studentCountEl.textContent = counts.reduce((s, c) => s + c.s, 0);
+            assignmentCountEl.textContent = counts.reduce((s, c) => s + c.a, 0);
+        }
+
+        await updateStats();
+
+        btnCreate.addEventListener('click', async function() {
+            if (!className.value.trim() || !classCode.value.trim()) { showAlert('Vui lòng nhập tên lớp và mã lớp', 'error'); return; }
+            try {
+                await GeoConnectApp.createClass(className.value.trim(), classCode.value.trim(), user.username);
+                showAlert('✅ Tạo lớp thành công!', 'success');
+                className.value = ''; classCode.value = ''; classDesc.value = '';
+                await updateStats();
+            } catch (err) {
+                showAlert('❌ ' + (err.data?.message || err.message || 'Tạo lớp thất bại'), 'error');
+            }
+        });
+
+        btnShowClasses.addEventListener('click', async function() {
+            await displayClasses();
+            document.querySelector('.section-card:first-of-type').style.display = 'none';
+            classesListSection.style.display = 'block';
+        });
+
+        btnBackCreate.addEventListener('click', function() {
+            document.querySelector('.section-card:first-of-type').style.display = 'block';
+            classesListSection.style.display = 'none';
+        });
+
+        async function displayClasses() {
+            const allClasses = await GeoConnectApp.getTeacherClasses(user.username);
+            if (!allClasses.length) {
+                classList.innerHTML = '<div class="empty-state">📚 Bạn chưa tạo lớp nào. Hãy bắt đầu bằng cách tạo lớp đầu tiên!</div>';
+                return;
+            }
+            const cards = await Promise.all(allClasses.map(async cls => {
+                const [students, assignments, posts] = await Promise.all([
+                    GeoConnectApp.getClassStudents(cls.id),
+                    GeoConnectApp.getAssignments(cls.id),
+                    GeoConnectApp.getClassPostsByClassId(cls.id).catch(() => []),
+                ]);
+                return `
+                    <div class="class-card">
+                        <div class="class-card-header">
+                            <div>
+                                <div class="class-card-title">📚 ${cls.name}</div>
+                                <div style="font-size:12px; color:#999; margin-top:4px;">Mã: ${cls.code}</div>
+                            </div>
+                        </div>
+                        <div class="class-card-meta">
+                            <span>👥 ${students.length} học sinh</span>
+                            <span>📝 ${assignments.length} bài tập</span>
+                            <span>📖 ${posts.length} bài đăng</span>
+                        </div>
+                        <div style="margin-top:12px;">
+                            <button class="class-card-btn" onclick="goToClassDetail('${cls.id}')">📖 Vào lớp</button>
+                            <button class="class-card-btn class-card-btn-info" onclick="openEditModal('${cls.id}')">✏️ Sửa</button>
+                            <button class="class-card-btn class-card-btn-danger" onclick="deleteClass('${cls.id}')">🗑️ Xóa</button>
+                        </div>
+                    </div>`;
+            }));
+            classList.innerHTML = cards.join('');
+        }
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-' + type;
+            alertDiv.textContent = message;
+            alertContainer.insertAdjacentElement('afterbegin', alertDiv);
+            setTimeout(() => { alertDiv.remove(); }, 4000);
+        }
+
+        window.goToClassDetail = function(classId) { window.location.href = 'teacher-class-detail.html?classId=' + classId; };
+
+        window.openEditModal = async function(classId) {
+            const cls = await GeoConnectApp.getClassById(classId);
+            if (!cls) return;
+            document.getElementById('editClassId').value = classId;
+            document.getElementById('editClassName').value = cls.name;
+            document.getElementById('editClassCode').value = cls.code;
+            document.getElementById('editClassDesc').value = cls.description || '';
+            document.getElementById('editClassModal').classList.add('active');
+        };
+
+        document.getElementById('editClassForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const classId = document.getElementById('editClassId').value;
+            try {
+                await GeoConnectApp.updateClass(classId, {
+                    name: document.getElementById('editClassName').value,
+                    code: document.getElementById('editClassCode').value,
+                });
+                showAlert('✅ Cập nhật lớp thành công!', 'success');
+                closeModal('editClassModal');
+                await displayClasses();
+                await updateStats();
+            } catch (err) {
+                showAlert('❌ ' + (err.data?.message || err.message), 'error');
+            }
+        });
+
+        window.deleteClass = async function(classId) {
+            if (confirm('Bạn chắc chắn muốn xóa lớp này? Hành động này không thể hoàn tác.')) {
+                try { await GeoConnectApp.deleteClass(classId); showAlert('✅ Xóa lớp thành công!', 'success'); await displayClasses(); await updateStats(); }
+                catch (err) { showAlert('❌ ' + (err.data?.message || err.message), 'error'); }
+            }
+        };
+
+        window.closeModal = function(modalId) { document.getElementById(modalId).classList.remove('active'); };
+    });</script>
+</body>
+</html>

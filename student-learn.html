@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bài học | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .lesson-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .lesson-card { padding: 16px; background: white; border: 1px solid #eee; border-radius: 12px; cursor: pointer; transition: all 0.3s; }
+        .lesson-card:hover { box-shadow: 0 4px 12px rgba(142, 68, 173, 0.15); transform: translateY(-2px); border-color: #8e44ad; }
+        .lesson-card h3 { color: #8e44ad; margin: 0 0 8px 0; }
+        .lesson-meta { display: flex; gap: 12px; font-size: 12px; color: #666; margin-top: 10px; }
+        .lesson-detail { background: white; border: 1px solid #eee; border-radius: 12px; padding: 24px; }
+        .lesson-detail h2 { margin-top: 0; color: #8e44ad; }
+        .lesson-section { margin-bottom: 24px; }
+        .lesson-section h3 { color: #333; border-bottom: 2px solid #8e44ad; padding-bottom: 8px; }
+        .resource-list { list-style: none; padding: 0; }
+        .resource-item { padding: 12px; background: #f5f7fa; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+        .resource-icon { width: 32px; height: 32px; background: #8e44ad; color: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .resource-info { flex: 1; }
+        .resource-name { font-weight: 600; color: #333; }
+        .resource-size { font-size: 12px; color: #999; }
+        .resource-actions { display: flex; gap: 8px; }
+        .btn-download { padding: 6px 12px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.3s; }
+        .btn-download:hover { background: #1e8449; }
+        .content-text { line-height: 1.6; color: #555; }
+        .btn-back { margin-top: 16px; }
+        .embed-wrap {
+            position: relative;
+            width: 100%;
+            max-width: calc((100vh - 220px) * 16 / 9);
+            margin: 0 auto;
+            overflow: hidden;
+            border-radius: 8px;
+            background: #000;
+            overscroll-behavior: contain;
+            contain: layout paint;
+        }
+        .embed-wrap::before { content: ''; display: block; padding-top: 56.25%; }
+        .embed-wrap.pdf { max-width: none; background: #f5f5f5; }
+        .embed-wrap.pdf::before { padding-top: 0; height: min(80vh, calc(100vh - 180px)); }
+        .embed-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+        .embed-image { max-width: 100%; height: auto; border-radius: 8px; display: block; }
+        .embed-fallback { margin-top: 8px; font-size: 12px; color: #666; text-align: center; }
+        .resource-embed { margin-top: 10px; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Học sinh</div></div></div><div class="dashboard-nav"><a href="student-home.html">Quay lại cổng học sinh</a><a href="index.html">Trang chủ</a><a href="index.html" id="studentLearnLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>Bài học</h1><p class="dashboard-subtitle" id="learnSubtitle">Xem các bài học, video, tài liệu được biên soạn bởi giáo viên.</p></div></div>
+            <section class="section-card" id="lessonsView">
+                <div id="classScopeBar" style="display:none; margin-bottom:12px; padding:10px 14px; background:#f3e9fa; border-left:4px solid #8e44ad; border-radius:6px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                    <span id="classScopeLabel" style="color:#5b2c6f; font-weight:600;"></span>
+                    <a href="student-join-class.html" class="btn-outline" style="padding:6px 12px; font-size:13px; text-decoration:none;">← Quay lại danh sách lớp</a>
+                </div>
+                <h3 style="margin-bottom: 16px;">Danh sách bài học</h3>
+                <div class="lesson-grid" id="lessonsGrid"></div>
+            </section>
+            <section class="section-card" id="detailView" style="display:none;">
+                <button class="btn-outline btn-back" id="btnBackDetail">← Quay lại</button>
+                <div class="lesson-detail" id="lessonDetailContent"></div>
+            </section>
+        </main>
+    </div>
+    <script>
+        // Chặn page jump khi click vào iframe nhúng (Google Slides nav buttons, YouTube, …)
+        // Cơ chế: khi iframe trong .embed-wrap giành focus, lưu scrollY tại thời điểm
+        // window blur (trước khi browser auto-scroll), rồi revert mọi scroll lệch trong
+        // ~1.2 s. Wheel/touch/key của người dùng huỷ lock ngay để không cản scroll thật.
+        (function preventEmbedScrollJump() {
+            let lockedY = null;
+            let unlockTimer = null;
+            function lockNow(y) {
+                lockedY = y;
+                clearTimeout(unlockTimer);
+                unlockTimer = setTimeout(() => { lockedY = null; }, 1200);
+            }
+            function unlock() {
+                lockedY = null;
+                clearTimeout(unlockTimer);
+            }
+            window.addEventListener('blur', () => {
+                const yBefore = window.scrollY;
+                setTimeout(() => {
+                    const ae = document.activeElement;
+                    if (ae && ae.tagName === 'IFRAME' && ae.closest && ae.closest('.embed-wrap')) {
+                        lockNow(yBefore);
+                    }
+                }, 0);
+            }, true);
+            window.addEventListener('scroll', () => {
+                if (lockedY !== null && Math.abs(window.scrollY - lockedY) > 2) {
+                    window.scrollTo(0, lockedY);
+                }
+            }, { passive: true });
+            ['wheel', 'touchstart', 'keydown'].forEach(ev => {
+                window.addEventListener(ev, (e) => {
+                    if (lockedY === null) return;
+                    const ae = document.activeElement;
+                    if (!ae || ae.tagName !== 'IFRAME' || !ae.closest || !ae.closest('.embed-wrap')) {
+                        unlock();
+                    }
+                }, { passive: true, capture: true });
+            });
+        })();
+
+        let _allLessons = [];
+        document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('student', 'login.html')) return;
+        GeoConnectApp.bindLogout('#studentLearnLogout');
+
+        const lessonsView = document.getElementById('lessonsView');
+        const detailView = document.getElementById('detailView');
+        const lessonsGrid = document.getElementById('lessonsGrid');
+        const btnBackDetail = document.getElementById('btnBackDetail');
+        const lessonDetailContent = document.getElementById('lessonDetailContent');
+
+        async function showLessons() {
+            const params = new URLSearchParams(window.location.search);
+            const classIdParam = params.get('classId');
+            const user = await GeoConnectApp.getCurrentUser();
+            const userClasses = await GeoConnectApp.getStudentClasses(user.username);
+            const classIds = userClasses.map(c => String(c.id));
+            const scopedClass = classIdParam && classIds.includes(String(classIdParam))
+                ? userClasses.find(c => String(c.id) === String(classIdParam))
+                : null;
+
+            // Hiển thị badge tên lớp nếu đang scope
+            const scopeBar = document.getElementById('classScopeBar');
+            const scopeLabel = document.getElementById('classScopeLabel');
+            if (scopedClass) {
+                scopeBar.style.display = 'flex';
+                scopeLabel.textContent = '📚 Bài giảng — Lớp: ' + scopedClass.name + ' (' + scopedClass.code + ')';
+            } else {
+                scopeBar.style.display = 'none';
+            }
+
+            const all = scopedClass
+                ? await GeoConnectApp.getLessons({ classId: scopedClass.id })
+                : await GeoConnectApp.getLessons();
+            _allLessons = scopedClass
+                ? all.filter(l => String(l.classId) === String(scopedClass.id))
+                : all.filter(l => !l.classId || classIds.includes(String(l.classId)));
+
+            if (!_allLessons.length) {
+                lessonsGrid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Không có bài học nào hiện tại</p>';
+            } else {
+                lessonsGrid.innerHTML = _allLessons.map(lesson => '<div class="lesson-card" onclick="showLesson(\'' + lesson.id + '\')"><div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span style="font-size:24px;">📚</span><span style="background:#8e44ad; color:white; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600;">Chương ' + (lesson.chapter || '?') + '</span></div><h3>' + lesson.title + '</h3><p style="color:#666; font-size:14px; margin:8px 0;">' + (lesson.description || 'Không có mô tả').substring(0, 80) + '...</p><div class="lesson-meta"><span>⏱️ Bài giảng</span><span>📎 ' + ((lesson.resources || []).length) + ' tài liệu</span></div></div>').join('');
+            }
+        }
+
+        function escapeAttr(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function buildEmbedHtml(rawUrl, hintType) {
+            const url = (rawUrl || '').trim();
+            if (!url || url === '#') return '';
+            const safeUrl = escapeAttr(url);
+            const openBtn = '<div class="embed-fallback">Không xem được? <a href="' + safeUrl + '" target="_blank" rel="noopener">Mở trong tab mới</a></div>';
+
+            function wrap(inner, extraClass) {
+                return '<div class="embed-wrap' + (extraClass ? ' ' + extraClass : '') + '">' + inner + '</div>' + openBtn;
+            }
+            // YouTube
+            const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+            if (yt) {
+                return wrap('<iframe class="embed-frame" src="https://www.youtube.com/embed/' + escapeAttr(yt[1]) + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>');
+            }
+            // Vimeo
+            const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+            if (vm) {
+                return wrap('<iframe class="embed-frame" src="https://player.vimeo.com/video/' + escapeAttr(vm[1]) + '" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>');
+            }
+            // Google Drive file
+            const gd = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([A-Za-z0-9_-]+)/);
+            if (gd) {
+                return wrap('<iframe class="embed-frame" src="https://drive.google.com/file/d/' + escapeAttr(gd[1]) + '/preview" allow="autoplay" allowfullscreen loading="lazy"></iframe>');
+            }
+            // Google Slides / Docs / Sheets / Forms — swap /edit (and pub) for /preview
+            if (/docs\.google\.com\/(presentation|document|spreadsheets|forms)\//.test(url)) {
+                let embedUrl = url.replace(/\/edit[^?#]*/, '/preview').replace(/\/pub[^?#]*/, '/embed');
+                if (!/\/preview|\/embed/.test(embedUrl)) embedUrl = embedUrl.replace(/\/(view|present)[^?#]*/, '/preview');
+                return wrap('<iframe class="embed-frame" src="' + escapeAttr(embedUrl) + '" allowfullscreen loading="lazy"></iframe>');
+            }
+            // SlideShare / Canva / OneDrive — try iframe
+            if (/(slideshare\.net|canva\.com|onedrive\.live\.com|1drv\.ms|sharepoint\.com)/.test(url)) {
+                return wrap('<iframe class="embed-frame" src="' + safeUrl + '" allowfullscreen loading="lazy"></iframe>');
+            }
+            // Direct video files
+            if (hintType === 'video' || /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url)) {
+                return wrap('<video class="embed-frame" src="' + safeUrl + '" controls preload="metadata"></video>');
+            }
+            // Direct image
+            if (hintType === 'image' || /\.(png|jpe?g|gif|webp|svg|bmp)(\?|#|$)/i.test(url)) {
+                return '<img class="embed-image" src="' + safeUrl + '" alt="">' + openBtn;
+            }
+            // PDF (direct)
+            if (hintType === 'pdf' || /\.pdf(\?|#|$)/i.test(url)) {
+                return wrap('<iframe class="embed-frame" src="' + safeUrl + '" loading="lazy"></iframe>', 'pdf');
+            }
+            // Unknown — fallback: just a button (some sites block iframes via X-Frame-Options)
+            return '';
+        }
+
+        window.showLesson = function(lessonId) {
+            const lesson = _allLessons.find(l => l.id === lessonId);
+            if (!lesson) { alert('Lỗi: Không tìm thấy bài học'); return; }
+
+            // Phần bài giảng chính — nhúng trực tiếp khi có thể
+            let mainLessonHtml = '';
+            if (lesson.lessonUrl && lesson.lessonUrl.trim() !== '') {
+                const embed = buildEmbedHtml(lesson.lessonUrl);
+                const safeUrl = escapeAttr(lesson.lessonUrl);
+                const linkBtn = '<a href="' + safeUrl + '" target="_blank" rel="noopener" class="btn-download" style="display:inline-block; background:#3498db; text-decoration:none; padding:8px 16px; margin-top:10px;"><strong>🔗 Mở trong tab mới</strong></a>';
+                mainLessonHtml = '<div class="lesson-section" style="background: #f0f7ff; padding: 16px; border-radius: 8px; border-left: 4px solid #3498db;"><h3 style="margin-top:0; color: #2980b9;">🎓 Bài giảng chính</h3>' + (embed || ('<p style="color:#555;">Nhấn nút bên dưới để truy cập bài giảng:</p>' + linkBtn)) + '</div>';
+            }
+
+            // Phần tài liệu bổ sung — nhúng inline mỗi tài liệu khi có thể
+            let resourcesHtml = '';
+            if (lesson.resources && lesson.resources.length > 0) {
+                resourcesHtml = '<div class="lesson-section"><h3>📎 Tài liệu bổ sung</h3><ul class="resource-list">';
+                lesson.resources.forEach((resource) => {
+                    const icons = { 'video': '🎥', 'pdf': '📄', 'image': '🖼️', 'link': '🔗', 'document': '📝' };
+                    const icon = icons[resource.type] || '📎';
+                    const url = resource.url || '';
+                    const safeUrl = escapeAttr(url);
+                    const safeName = escapeAttr(resource.name || '');
+                    const safeDesc = escapeAttr(resource.description || '');
+
+                    if (url && url.trim() !== '' && url !== '#') {
+                        const embed = buildEmbedHtml(url, resource.type);
+                        resourcesHtml += '<li class="resource-item" style="flex-wrap:wrap;"><div class="resource-icon">' + icon + '</div><div class="resource-info"><div class="resource-name">' + safeName + '</div><div class="resource-size">' + safeDesc + '</div></div><div class="resource-actions"><a href="' + safeUrl + '" target="_blank" rel="noopener" class="btn-download" style="display:inline-block; text-decoration:none;"><strong>🔗 Mở tab mới</strong></a></div>' + (embed ? '<div class="resource-embed" style="flex-basis:100%;">' + embed + '</div>' : '') + '</li>';
+                    } else {
+                        resourcesHtml += '<li class="resource-item"><div class="resource-icon">' + icon + '</div><div class="resource-info"><div class="resource-name">' + safeName + '</div><div class="resource-size">' + safeDesc + '</div></div><div style="color:#999; font-size:12px;">⚠️ Chưa có URL</div></li>';
+                    }
+                });
+                resourcesHtml += '</ul></div>';
+            }
+            
+            const contentHtml = '<h2>Chương ' + (lesson.chapter || '?') + ': ' + lesson.title + '</h2>' + mainLessonHtml + '<div class="lesson-section"><h3>📖 Mô tả</h3><p class="content-text">' + (lesson.description || 'Không có mô tả') + '</p></div>' + resourcesHtml;
+
+            lessonDetailContent.innerHTML = contentHtml;
+            lessonsView.style.display = 'none';
+            detailView.style.display = 'block';
+            window.scrollTo(0, 0);
+        };
+
+        btnBackDetail.addEventListener('click', function() {
+            lessonsView.style.display = 'block';
+            detailView.style.display = 'none';
+        });
+
+        await showLessons();
+    });</script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiến độ học tập | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .progress-card { margin-bottom: 16px; padding: 14px; background: white; border: 1px solid #eee; border-radius: 8px; }
+        .progress-card strong { display: block; margin-bottom: 8px; font-size: 15px; }
+        .progress-track { width: 100%; height: 20px; background: #e9ecef; border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #4CAF50, #45a049); border-radius: 10px; transition: width 0.3s; }
+        .progress-info { display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: #666; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .stat-item { padding: 14px; background: white; border: 1px solid #eee; border-radius: 8px; text-align: center; }
+        .stat-item strong { display: block; font-size: 28px; color: #0056b3; margin-bottom: 4px; }
+        .stat-item span { display: block; font-size: 12px; color: #666; margin-top: 4px; }
+        .week-tracker { margin-top: 14px; }
+        .week-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 8px; background: #f8f9fa; border-radius: 6px; }
+        .week-item .week-label { font-size: 13px; font-weight: 600; }
+        .week-item .week-stats { font-size: 12px; color: #666; }
+        .pending-badge { display: inline-block; padding: 2px 8px; background: #fff3cd; color: #856404; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .completed-badge { display: inline-block; padding: 2px 8px; background: #d4edda; color: #155724; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Phụ huynh</div></div></div><div class="dashboard-nav"><a href="parent-dashboard.html">Quay lại cổng phụ huynh</a><a href="index.html">Trang chủ</a><a href="index.html" id="parentProgressLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content"><div class="dashboard-topbar"><div><h1>Tiến độ học tập</h1><p class="dashboard-subtitle">Theo dõi biểu đồ tiến độ và mức độ hoàn thành bài tập.</p></div></div>
+        <section class="section-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <div class="input-group" style="flex: 1;">
+                    <label>Học sinh</label>
+                    <div style="padding: 12px 14px; background: #f8f9fa; border-radius: 12px; font-weight: 500;" id="studentDisplayArea">--</div>
+                </div>
+                <a href="parent-setup.html" style="padding: 10px 14px; background: #e9ecef; border-radius: 6px; text-decoration: none; color: #333; font-size: 13px; margin-top: 24px;">Đổi học sinh</a>
+            </div>
+            <div id="progressContent"></div>
+        </section></main>
+    </div>
+    <script>document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('parent', 'login.html')) return;
+        GeoConnectApp.bindLogout('#parentProgressLogout');
+
+        const progressContent = document.getElementById('progressContent');
+        const session = await GeoConnectApp.getParentSession();
+        if (!session.selectedStudentUsername) { window.location.href = 'parent-setup.html'; return; }
+        const studentUsername = session.selectedStudentUsername;
+
+        document.getElementById('studentDisplayArea').textContent = session.selectedStudent ? session.selectedStudent.fullName + ' (' + studentUsername + ')' : '--';
+
+        async function loadProgress() {
+            const studentClasses = await GeoConnectApp.getStudentClasses(studentUsername);
+            const allSubs = await GeoConnectApp.getStudentSubmissions(studentUsername);
+            let totalAssignments = 0, completedAssignments = 0, pendingGrading = 0;
+
+            const classProgress = await Promise.all(studentClasses.map(async cls => {
+                const [progress, assignments] = await Promise.all([
+                    GeoConnectApp.calculateStudentProgress(studentUsername, cls.id),
+                    GeoConnectApp.getAssignments(cls.id),
+                ]);
+                assignments.forEach(a => {
+                    totalAssignments++;
+                    const sub = allSubs.find(s => s.assignmentId === a.id);
+                    if (sub) {
+                        completedAssignments++;
+                        if (sub.score == null) pendingGrading++;
+                    }
+                });
+                return { cls, progress };
+            }));
+
+            const completionPercent = totalAssignments > 0 ? Math.round((completedAssignments / totalAssignments) * 100) : 0;
+
+            let html = '<div class="stat-grid">';
+            html += '<div class="stat-item"><strong>' + completionPercent + '%</strong><span>Hoàn thành</span></div>';
+            html += '<div class="stat-item"><strong>' + completedAssignments + '</strong><span>Bài đã nộp</span></div>';
+            html += '<div class="stat-item"><strong>' + pendingGrading + '</strong><span>Chờ chấm điểm</span></div>';
+            html += '<div class="stat-item"><strong>' + (totalAssignments - completedAssignments) + '</strong><span>Bài còn lại</span></div>';
+            html += '</div><h3 style="margin-bottom: 12px; font-size: 16px;">Chi tiết theo lớp:</h3>';
+
+            for (const { cls, progress } of classProgress) {
+                if (!progress) continue;
+                html += '<div class="progress-card"><div style="display: flex; justify-content: space-between; align-items: center;"><strong>' + cls.name + '</strong><span style="font-size: 14px; color: #0056b3; font-weight: 600;">' + progress.completionPercent + '%</span></div>';
+                html += '<div class="progress-track"><div class="progress-fill" style="width:' + progress.completionPercent + '%"></div></div>';
+                html += '<div class="progress-info"><span>' + progress.completedAssignments + '/' + progress.totalAssignments + ' bài hoàn thành</span><span>Điểm TB: ' + progress.averageScore + '</span></div></div>';
+            }
+            if (!classProgress.length) html += '<p style="text-align:center; color:#666;">Chưa có dữ liệu tiến độ</p>';
+            progressContent.innerHTML = html;
+        }
+
+        await loadProgress();
+    });</script>
+</body>
+</html>

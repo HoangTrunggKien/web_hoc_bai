@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giao bài tập | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .assignment-card {
+            background: white;
+            border: 1px solid #d6e0ec;
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+        .assignment-card:hover {
+            border-color: #27ae60;
+            box-shadow: 0 2px 8px rgba(39, 174, 96, 0.1);
+        }
+        .assignment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            margin: auto;
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #d6e0ec;
+            padding-bottom: 12px;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            border-top: 1px solid #d6e0ec;
+            padding-top: 12px;
+        }
+        .btn-modal {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .btn-primary-modal {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-primary-modal:hover {
+            background: #229954;
+        }
+        .btn-danger-modal {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger-modal:hover {
+            background: #c82333;
+        }
+        .btn-secondary-modal {
+            background: #e9ecef;
+            color: #333;
+        }
+        .btn-secondary-modal:hover {
+            background: #dee2e6;
+        }
+        .stat-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .stat-item strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+        .submission-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .submission-item:last-child {
+            border-bottom: none;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .btn-small {
+            padding: 6px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .btn-small-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-small-danger:hover {
+            background: #c82333;
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d6e0ec;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .resource-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #27ae60;
+        }
+        .resource-item input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d6e0ec;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .resource-item textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d6e0ec;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            margin-bottom: 8px;
+            resize: vertical;
+            min-height: 60px;
+            box-sizing: border-box;
+        }
+        .resource-url-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .btn-remove-resource {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .btn-remove-resource:hover {
+            background: #c82333;
+        }
+        .btn-add-resource {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        .btn-add-resource:hover {
+            background: #229954;
+        }
+        .resources-section {
+            background: #f0f7f2;
+            padding: 14px;
+            border-radius: 8px;
+            margin-bottom: 14px;
+            border: 1px solid #d1f2eb;
+        }
+        .resources-section h4 {
+            margin: 0 0 12px 0;
+            color: #27ae60;
+            font-size: 14px;
+        }
+        .quiz-question-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid #8e44ad;
+        }
+        .quiz-question-item input[type="text"],
+        .quiz-question-item textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d6e0ec;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .quiz-option-item {
+            background: white;
+            padding: 8px;
+            border-radius: 6px;
+            margin: 6px 0;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .quiz-option-item input[type="text"] {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .quiz-option-item input[type="radio"] {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+        .btn-remove-question {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .btn-remove-question:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Giáo viên</div></div></div>
+            <div class="dashboard-nav"><a href="teacher-dashboard.html">Quay lại cổng giáo viên</a><a href="index.html">Trang chủ</a><a href="index.html" id="teacherAssignmentsLogout">Đăng xuất</a></div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>Giao bài tập</h1><p class="dashboard-subtitle">Phân phối bài mới theo lớp hoặc nhóm học sinh.</p></div></div>
+            <section class="section-card">
+                <div class="input-group" style="margin-bottom:14px;">
+                    <label>Chọn lớp để xem bài tập</label>
+                    <select id="classSelect" style="width:100%; padding:12px 14px; border:1px solid #d6e0ec; border-radius:12px;">
+                        <option value="">-- Chọn lớp --</option>
+                    </select>
+                </div>
+                <div class="assignment-grid" id="assignmentsList"></div>
+                <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:14px;">
+                    <button class="btn-primary" id="btnCreateAssignmentModal">Tạo bài tập mới</button>
+                </div>
+            </section>
+
+            <!-- Create Assignment Modal -->
+            <div class="modal-overlay" id="createAssignmentModal">
+                <div class="modal-content">
+                    <div class="modal-header">➕ Tạo bài tập mới</div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Loại bài tập</label>
+                            <select id="assignType" style="width:100%; padding:10px 12px; border:1px solid #d6e0ec; border-radius:8px;">
+                                <option value="quiz">❓ Trắc nghiệm (tự động chấm)</option>
+                                <option value="essay">✍️ Tự luận (chấm theo từ khóa)</option>
+                                <option value="upload">📤 Học sinh nộp file (Word/PDF/ảnh)</option>
+                                <option value="attachment">📎 Chỉ tài liệu đính kèm (không nộp bài)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tiêu đề bài tập</label>
+                            <input type="text" id="assignTitle" placeholder="Ví dụ: Trắc nghiệm về kinh vĩ tuyến">
+                        </div>
+                        <div class="form-group">
+                            <label>Mô tả (tùy chọn)</label>
+                            <textarea id="assignDesc" placeholder="Hướng dẫn, ghi chú cho học sinh"></textarea>
+                        </div>
+
+                        <!-- Tài liệu kèm (chung cho mọi type — học sinh tải về xem) -->
+                        <div id="resourcesSection" class="resources-section">
+                            <h4>📎 Tài liệu / file đính kèm cho học sinh</h4>
+                            <div style="font-size:12px; color:#666; margin-bottom:8px;">URL tài liệu (PDF, ảnh, video, link bài giảng…). Có thể bỏ trống.</div>
+                            <div id="resourcesList"></div>
+                            <button type="button" class="btn-add-resource" onclick="addResourceField('add'); return false;">📎 + Thêm tài liệu</button>
+                        </div>
+
+                        <!-- Quiz Questions Section -->
+                        <div id="quizQuestionsSection" style="display:none;" class="resources-section">
+                            <h4>❓ Câu hỏi trắc nghiệm</h4>
+                            <div id="quizQuestionsList"></div>
+                            <button type="button" class="btn-add-resource" onclick="addQuizQuestion(); return false;">➕ + Thêm câu hỏi</button>
+                        </div>
+
+                        <!-- Essay Questions Section -->
+                        <div id="essayQuestionsSection" style="display:none;" class="resources-section">
+                            <h4>✍️ Câu hỏi tự luận (chấm tự động theo từ khóa)</h4>
+                            <div style="font-size:12px; color:#666; margin-bottom:8px;">Khai báo từ khóa kỳ vọng. Hệ thống sẽ chấm điểm theo tỷ lệ từ khóa khớp với câu trả lời học sinh.</div>
+                            <div id="essayQuestionsList"></div>
+                            <button type="button" class="btn-add-resource" onclick="addEssayQuestion(); return false;">➕ + Thêm câu hỏi</button>
+                        </div>
+
+                        <!-- Upload guidance (cho type upload) -->
+                        <div id="uploadGuide" style="display:none; padding:14px; background:#fff8e1; border-left:4px solid #ffc107; border-radius:6px; margin-bottom:14px;">
+                            <strong>📤 Học sinh sẽ tải lên file bài làm</strong> (Word/PDF/ảnh). Bạn chấm điểm thủ công ở mục Chấm điểm.
+                        </div>
+
+                        <!-- Attachment-only guidance -->
+                        <div id="attachmentGuide" style="display:none; padding:14px; background:#e3f2fd; border-left:4px solid #2196f3; border-radius:6px; margin-bottom:14px;">
+                            <strong>📎 Chỉ phát tài liệu</strong>, học sinh không cần nộp bài. Dùng cho tài liệu tham khảo, đề ôn tập.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-modal btn-secondary-modal" onclick="closeCreateModal()">Hủy</button>
+                        <button class="btn-modal btn-primary-modal" onclick="saveAssignment()">Tạo bài tập</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignment Detail Modal -->
+            <div class="modal-overlay" id="assignmentDetailModal">
+                <div class="modal-content">
+                    <div class="modal-header" id="detailHeader"></div>
+                    <div class="modal-body" id="detailBody"></div>
+                    <div class="modal-footer">
+                        <button class="btn-modal btn-secondary-modal" onclick="closeDetailModal()">Đóng</button>
+                        <button class="btn-modal btn-primary-modal" onclick="editAssignment()" style="background: #27ae60;">✏️ Sửa</button>
+                        <button class="btn-modal btn-danger-modal" onclick="deleteAssignmentConfirm()">Xóa bài</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Assignment Modal -->
+            <div class="modal-overlay" id="editAssignmentModal">
+                <div class="modal-content">
+                    <div class="modal-header">✏️ Sửa bài tập</div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Tiêu đề bài tập</label>
+                            <input type="text" id="editAssignTitle" placeholder="Ví dụ: Trắc nghiệm về kinh vĩ tuyến">
+                        </div>
+                        <div class="form-group">
+                            <label>Mô tả (tùy chọn)</label>
+                            <textarea id="editAssignDesc" placeholder="Hướng dẫn, ghi chú cho học sinh"></textarea>
+                        </div>
+                        <div id="editResourcesSection" class="resources-section">
+                            <h4>📎 Tài liệu & Tài nguyên</h4>
+                            <div id="editResourcesList"></div>
+                            <button type="button" class="btn-add-resource" onclick="addResourceField('edit'); return false;">📎 + Thêm tài liệu</button>
+                        </div>
+                        <div id="editQuizQuestionsSection" style="display:none;" class="resources-section">
+                            <h4>❓ Câu hỏi trắc nghiệm</h4>
+                            <div id="editQuizQuestionsList"></div>
+                            <button type="button" class="btn-add-resource" onclick="addQuizQuestion('edit'); return false;">➕ + Thêm câu hỏi</button>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-modal btn-secondary-modal" onclick="closeEditModal()">Hủy</button>
+                        <button class="btn-modal btn-primary-modal" onclick="updateAssignment()">Lưu thay đổi</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        let currentAssignmentId = null;
+        let currentClassId = null;
+        let classSelect = null;
+        let assignmentsList = null;
+        let btnCreateAssignmentModal = null;
+        let assignTitle = null;
+        let assignDesc = null;
+        let assignType = null;
+
+        function addResourceField(mode) {
+            const containerId = mode === 'edit' ? 'editResourcesList' : 'resourcesList';
+            const container = document.getElementById(containerId);
+            const resourceId = 'resource-' + Date.now() + '-' + Math.random();
+            
+            const resourceField = `
+                <div class="resource-item" id="${resourceId}">
+                    <input type="text" placeholder="Tên tài liệu (ví dụ: Bản đồ Việt Nam)" data-resource-name>
+                    <textarea placeholder="Mô tả/Hướng dẫn sử dụng" data-resource-desc></textarea>
+                    <input type="text" placeholder="Link URL (ví dụ: https://example.com/file.pdf)" data-resource-url class="resource-url-input">
+                    <button type="button" class="btn-remove-resource" onclick="document.getElementById('${resourceId}').remove()">Xóa tài liệu này</button>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', resourceField);
+        }
+
+        function addQuizQuestion(mode = 'add') {
+            const containerId = mode === 'edit' ? 'editQuizQuestionsList' : 'quizQuestionsList';
+            const container = document.getElementById(containerId);
+            const questionId = 'question-' + Date.now() + '-' + Math.random();
+            
+            const questionField = `
+                <div class="quiz-question-item" id="${questionId}">
+                    <textarea placeholder="Nhập câu hỏi..." data-quiz-question style="margin-bottom: 10px;"></textarea>
+                    <div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: 500;">Đáp án:</div>
+                    <div data-quiz-options-container="">
+                        <div class="quiz-option-item">
+                            <input type="text" placeholder="Đáp án (vd: A)" data-quiz-option-label style="max-width: 50px;">
+                            <input type="text" placeholder="Nội dung" data-quiz-option-text>
+                            <input type="radio" name="correct-${questionId}" data-quiz-option-correct title="Chọn làm đáp án đúng">
+                        </div>
+                    </div>
+                    <button type="button" class="btn-add-resource" style="width:100%; padding:8px; margin-top:8px; margin-bottom: 8px;" onclick="addQuizOption('${questionId}'); return false;">+ Thêm đáp án</button>
+                    <button type="button" class="btn-remove-question" onclick="document.getElementById('${questionId}').remove()">Xóa câu hỏi</button>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', questionField);
+        }
+
+        function addQuizOption(questionId) {
+            const question = document.getElementById(questionId);
+            const optionsContainer = question.querySelector('[data-quiz-options-container]');
+            const optionItem = document.createElement('div');
+            optionItem.className = 'quiz-option-item';
+            optionItem.innerHTML = `
+                <input type="text" placeholder="Đáp án (vd: B)" data-quiz-option-label style="max-width: 50px;">
+                <input type="text" placeholder="Nội dung" data-quiz-option-text>
+                <input type="radio" name="correct-${questionId}" data-quiz-option-correct title="Chọn làm đáp án đúng">
+                <button type="button" style="padding:4px 8px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;" onclick="this.parentElement.remove()">Xóa</button>
+            `;
+            optionsContainer.insertAdjacentElement('beforeend', optionItem);
+        }
+
+        function collectResources(mode) {
+            const containerId = mode === 'edit' ? 'editResourcesList' : 'resourcesList';
+            const container = document.getElementById(containerId);
+            const resources = [];
+            
+            container.querySelectorAll('.resource-item').forEach(item => {
+                const name = item.querySelector('[data-resource-name]').value.trim();
+                const desc = item.querySelector('[data-resource-desc]').value.trim();
+                const url = item.querySelector('[data-resource-url]').value.trim();
+                
+                if (name && url) {
+                    const resource = {
+                        id: Date.now() + '-' + Math.random(),
+                        name: name,
+                        description: desc,
+                        url: url
+                    };
+                    
+                    resources.push(resource);
+                }
+            });
+            
+            return resources;
+        }
+
+        function collectQuizQuestions(mode = 'add') {
+            const containerId = mode === 'edit' ? 'editQuizQuestionsList' : 'quizQuestionsList';
+            const container = document.getElementById(containerId);
+            const questions = [];
+            
+            container.querySelectorAll('.quiz-question-item').forEach(item => {
+                const questionText = item.querySelector('[data-quiz-question]').value.trim();
+                if (!questionText) return;
+                
+                const options = [];
+                let correctAnswer = -1;
+                
+                item.querySelectorAll('.quiz-option-item').forEach((optionItem, idx) => {
+                    const label = optionItem.querySelector('[data-quiz-option-label]').value.trim();
+                    const text = optionItem.querySelector('[data-quiz-option-text]').value.trim();
+                    const isCorrect = optionItem.querySelector('[data-quiz-option-correct]').checked;
+                    
+                    if (label && text) {
+                        options.push(`${label}. ${text}`);
+                        if (isCorrect) correctAnswer = idx;
+                    }
+                });
+                
+                if (options.length >= 2 && correctAnswer !== -1) {
+                    questions.push({
+                        id: Date.now() + '-' + Math.random(),
+                        question: questionText,
+                        options: options,
+                        correctAnswer: correctAnswer
+                    });
+                }
+            });
+            
+            return questions;
+        }
+
+        // ==================== ESSAY QUESTIONS ====================
+        function addEssayQuestion(mode = 'add') {
+            const containerId = mode === 'edit' ? 'editEssayQuestionsList' : 'essayQuestionsList';
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const qid = 'essay-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+            const html = `
+                <div class="quiz-question-item" id="${qid}" data-essay-question>
+                    <textarea data-essay-q placeholder="Nội dung câu hỏi tự luận..." style="margin-bottom:10px;"></textarea>
+                    <div style="font-size:12px; color:#666; margin-bottom:6px; font-weight:500;">🔑 Từ khóa kỳ vọng (cách nhau bằng dấu phẩy):</div>
+                    <input type="text" data-essay-keywords placeholder="kinh tuyến, vĩ tuyến, xích đạo">
+                    <div style="font-size:12px; color:#666; margin-top:8px; margin-bottom:6px; font-weight:500;">📝 Đáp án mẫu (tùy chọn, dùng để tham khảo khi chấm):</div>
+                    <textarea data-essay-sample placeholder="Đáp án mẫu..." style="min-height:60px;"></textarea>
+                    <button type="button" class="btn-remove-question" onclick="document.getElementById('${qid}').remove()">🗑️ Xóa câu hỏi</button>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+        window.addEssayQuestion = addEssayQuestion;
+
+        function collectEssayQuestions(mode = 'add') {
+            const containerId = mode === 'edit' ? 'editEssayQuestionsList' : 'essayQuestionsList';
+            const container = document.getElementById(containerId);
+            if (!container) return [];
+            const questions = [];
+            container.querySelectorAll('[data-essay-question]').forEach(item => {
+                const q = item.querySelector('[data-essay-q]').value.trim();
+                const kwRaw = item.querySelector('[data-essay-keywords]').value.trim();
+                const sample = item.querySelector('[data-essay-sample]').value.trim();
+                if (!q) return;
+                const keywords = kwRaw.split(',').map(s => s.trim()).filter(Boolean);
+                questions.push({ question: q, keywords, sampleAnswer: sample, kind: 'essay' });
+            });
+            return questions;
+        }
+
+        let user = null;
+        let _allUsersCache = [];
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (!await GeoConnectApp.ensureRoleAccess('teacher', 'login.html')) return;
+            GeoConnectApp.bindLogout('#teacherAssignmentsLogout');
+
+            user = await GeoConnectApp.getCurrentUser();
+            _allUsersCache = await GeoConnectApp.getAllUsers();
+            classSelect = document.getElementById('classSelect');
+            assignmentsList = document.getElementById('assignmentsList');
+            btnCreateAssignmentModal = document.getElementById('btnCreateAssignmentModal');
+            
+            assignTitle = document.getElementById('assignTitle');
+            assignDesc = document.getElementById('assignDesc');
+            assignType = document.getElementById('assignType');
+            
+            // Handle assign type change
+            assignType.addEventListener('change', function() {
+                applyTypeSections(this.value);
+            });
+            applyTypeSections(assignType.value);
+
+            function applyTypeSections(type) {
+                document.getElementById('resourcesSection').style.display       = (type === 'attachment' || type === 'upload' || type === 'essay' || type === 'quiz') ? 'block' : 'none';
+                document.getElementById('quizQuestionsSection').style.display   = (type === 'quiz')       ? 'block' : 'none';
+                document.getElementById('essayQuestionsSection').style.display  = (type === 'essay')      ? 'block' : 'none';
+                document.getElementById('uploadGuide').style.display            = (type === 'upload')     ? 'block' : 'none';
+                document.getElementById('attachmentGuide').style.display        = (type === 'attachment') ? 'block' : 'none';
+            }
+            window.applyTypeSections = applyTypeSections;
+            
+            window.loadClasses = async function() {
+                const allClasses = await GeoConnectApp.getTeacherClasses(user.username);
+                classSelect.innerHTML = '<option value="">-- Chọn lớp --</option>';
+                allClasses.forEach(cls => {
+                    classSelect.innerHTML += '<option value="' + cls.id + '">' + cls.name + '</option>';
+                });
+            }
+
+            window.loadAssignments = async function() {
+                const classId = classSelect.value;
+                currentClassId = classId;
+                if (!classId) {
+                    assignmentsList.innerHTML = '<p style="text-align:center; color:#666; padding: 40px;">Chọn lớp để xem bài tập</p>';
+                    return;
+                }
+                const assignments = await GeoConnectApp.getAssignments(classId);
+                if (!assignments.length) {
+                    assignmentsList.innerHTML = '<p style="text-align:center; color:#666; padding: 40px;">Chưa có bài tập nào cho lớp này</p>';
+                    return;
+                }
+                const cards = await Promise.all(assignments.map(async assign => {
+                    const submissions = await GeoConnectApp.getSubmissions(assign.id);
+                    const submittedCount = submissions.filter(s => s.answers || s.submissionFile).length;
+                    const resourcesCount = (assign.attachments || assign.resources || []).length;
+                    const questionCount = (assign.questions || []).length;
+                    const typeLabels = {
+                        quiz:       `❓ Trắc nghiệm — ${questionCount} câu`,
+                        essay:      `✍️ Tự luận — ${questionCount} câu`,
+                        upload:     `📤 Học sinh nộp file`,
+                        attachment: `📎 Tài liệu (${resourcesCount} file/link)`,
+                    };
+                    const badge = typeLabels[assign.type] || `📝 Bài tập (${resourcesCount} tài liệu)`;
+                    return `
+                        <div class="assignment-card">
+                            <h3 style="margin-bottom: 8px;">${assign.title}</h3>
+                            ${badge ? '<p class="small-note" style="margin-bottom: 4px;">' + badge + '</p>' : ''}
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="small-note" style="color: #28a745; font-weight: 500;">Đã nộp: ${submittedCount}</span>
+                                <button class="btn-small" style="margin: 0; background: #27ae60; color: white;" onclick="viewAssignmentDetail('${assign.id}')">Chi tiết</button>
+                            </div>
+                        </div>`;
+                }));
+                assignmentsList.innerHTML = cards.join('');
+            }
+
+            window.viewAssignmentDetail = async function(assignmentId) {
+                const assignment = await GeoConnectApp.getAssignmentById(assignmentId);
+                if (!assignment) return;
+
+                currentAssignmentId = assignmentId;
+                const [submissions, students] = await Promise.all([
+                    GeoConnectApp.getSubmissions(assignmentId),
+                    GeoConnectApp.getClassStudents(currentClassId),
+                ]);
+                
+                const detailHeader = document.getElementById('detailHeader');
+                const detailBody = document.getElementById('detailBody');
+                
+                detailHeader.textContent = assignment.title;
+                
+                let html = `
+                    <div class="stat-item">
+                        <strong>Tiêu đề:</strong> ${assignment.title}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Loại:</strong> ${assignment.type === 'quiz' ? '❓ Trắc nghiệm' : '📝 Bài tập thường'}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Hạn nộp:</strong> ${assignment.dueAt ? new Date(assignment.dueAt).toLocaleDateString('vi-VN') : '-'}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Tổng học sinh:</strong> ${students.length}
+                    </div>
+                    <div class="stat-item">
+                        <strong>Đã nộp:</strong> ${submissions.filter(s => s.answers || s.submissionFile).length}/${students.length} (${students.length > 0 ? Math.round((submissions.filter(s => s.answers || s.submissionFile).length / students.length) * 100) : 0}%)
+                    </div>
+                `;
+                
+                if (assignment.type === 'quiz' && (assignment.questions || []).length > 0) {
+                    html += `<h3 style="margin-top: 20px; margin-bottom: 12px;">❓ Danh sách câu hỏi</h3><div>`;
+                    assignment.questions.forEach((q, idx) => {
+                        html += `<div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #8e44ad;">
+                            <strong>Câu ${idx + 1}: ${q.question}</strong>
+                            <div style="margin: 8px 0; font-size: 12px; color: #666;">`;
+                        q.options.forEach((opt, optIdx) => {
+                            const isCorrect = optIdx === q.correctAnswer;
+                            html += `<div style="margin: 4px 0; ${isCorrect ? 'color: #27ae60; font-weight: bold;' : ''}">${isCorrect ? '✓ ' : '  '}${opt}</div>`;
+                        });
+                        html += `</div></div>`;
+                    });
+                    html += `</div>`;
+                }
+                
+                const attachments = assignment.attachments || assignment.resources || [];
+                if (attachments.length > 0) {
+                    html += `
+                    <h3 style="margin-top: 20px; margin-bottom: 12px;">📎 Tài liệu & Tài nguyên</h3>
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #27ae60;">
+                    `;
+                    attachments.forEach(res => {
+                        html += `
+                        <div style="padding: 10px 0; border-bottom: 1px solid #e9ecef;">
+                            <strong>${res.name}</strong>
+                            ${res.description ? '<div class="small-note">' + res.description + '</div>' : ''}
+                            ${res.url ? '<div class="small-note"><a href="' + res.url + '" target="_blank" rel="noopener">📄 Tải xuống</a></div>' : ''}
+                        </div>
+                        `;
+                    });
+                    html += `</div></div>`;
+                }
+
+                if (submissions.length > 0) {
+                    html += `<h3 style="margin-top: 20px; margin-bottom: 12px;">Danh sách nộp bài</h3><div>`;
+                    submissions.forEach(sub => {
+                        const student = students.find(s => s.username === sub.studentUsername);
+                        const hasScore = sub.score != null;
+                        const score = hasScore ? sub.score : 0;
+                        const maxScore = assignment.type === 'quiz' ? (assignment.questions || []).length : 10;
+                        const statusText = hasScore ? `Đã chấm (${score}/${maxScore})` : 'Chưa chấm';
+                        const status = hasScore ? 'success' : 'warning';
+                        html += `
+                            <div class="submission-item">
+                                <div>
+                                    <div><strong>${student ? student.fullName : sub.studentUsername}</strong></div>
+                                    <div class="small-note">${new Date(sub.submittedAt).toLocaleString('vi-VN')}</div>
+                                </div>
+                                <span class="badge badge-${status}">${statusText}</span>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                }
+                
+                detailBody.innerHTML = html;
+                document.getElementById('assignmentDetailModal').classList.add('active');
+            };
+            
+            window.editAssignment = async function() {
+                const assignment = await GeoConnectApp.getAssignmentById(currentAssignmentId);
+                if (!assignment) return;
+                
+                document.getElementById('editAssignTitle').value = assignment.title;
+                document.getElementById('editAssignDesc').value = assignment.description || '';
+                
+                // Hiển thị/ẩn sections tùy theo loại bài tập
+                const editResourcesSection = document.getElementById('editResourcesSection');
+                const editQuizQuestionsSection = document.getElementById('editQuizQuestionsSection');
+                
+                if (assignment.type === 'quiz') {
+                    editResourcesSection.style.display = 'none';
+                    editQuizQuestionsSection.style.display = 'block';
+                } else {
+                    editResourcesSection.style.display = 'block';
+                    editQuizQuestionsSection.style.display = 'none';
+                }
+                
+                // Load resources hoặc quiz questions
+                if (assignment.type === 'quiz') {
+                    // Load quiz questions
+                    const editQuizQuestionsList = document.getElementById('editQuizQuestionsList');
+                    editQuizQuestionsList.innerHTML = '';
+                    
+                    if (assignment.questions && assignment.questions.length > 0) {
+                        assignment.questions.forEach((question) => {
+                            const questionId = 'question-' + Date.now() + '-' + Math.random();
+                            let optionsHTML = '';
+                            
+                            question.options.forEach((option, optIdx) => {
+                                const parts = option.split('. ');
+                                const label = parts[0];
+                                const text = parts.slice(1).join('. ');
+                                const isCorrect = optIdx === question.correctAnswer;
+                                
+                                optionsHTML += `
+                                    <div class="quiz-option-item">
+                                        <input type="text" placeholder="Đáp án" data-quiz-option-label value="${label}" style="max-width: 50px;">
+                                        <input type="text" placeholder="Nội dung" data-quiz-option-text value="${text}">
+                                        <input type="radio" name="correct-${questionId}" data-quiz-option-correct title="Chọn làm đáp án đúng" ${isCorrect ? 'checked' : ''}>
+                                        <button type="button" style="padding:4px 8px; background:#dc3545; color:white; border:none; border-radius:4px; cursor:pointer; font-size:11px;" onclick="this.parentElement.remove()">Xóa</button>
+                                    </div>
+                                `;
+                            });
+                            
+                            const questionField = `
+                                <div class="quiz-question-item" id="${questionId}">
+                                    <textarea placeholder="Nhập câu hỏi..." data-quiz-question style="margin-bottom: 10px;">${question.question}</textarea>
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: 500;">Đáp án:</div>
+                                    <div data-quiz-options-container="">
+                                        ${optionsHTML}
+                                    </div>
+                                    <button type="button" class="btn-add-resource" style="width:100%; padding:8px; margin-top:8px; margin-bottom: 8px;" onclick="addQuizOption('${questionId}'); return false;">+ Thêm đáp án</button>
+                                    <button type="button" class="btn-remove-question" onclick="document.getElementById('${questionId}').remove()">Xóa câu hỏi</button>
+                                </div>
+                            `;
+                            
+                            editQuizQuestionsList.insertAdjacentHTML('beforeend', questionField);
+                        });
+                    }
+                } else {
+                    // Load resources
+                    const editResourcesList = document.getElementById('editResourcesList');
+                    editResourcesList.innerHTML = '';
+                    
+                    const editAttachments = assignment.attachments || assignment.resources || [];
+                    if (editAttachments.length > 0) {
+                        editAttachments.forEach((resource, idx) => {
+                            const resourceId = 'resource-' + Date.now() + '-' + idx;
+                            editResourcesList.insertAdjacentHTML('beforeend', `
+                                <div class="resource-item" id="${resourceId}">
+                                    <input type="text" placeholder="Tên tài liệu" data-resource-name value="${resource.name}" style="width: 100%; padding: 10px 12px; border: 1px solid #d6e0ec; border-radius: 8px; font-size: 14px; margin-bottom: 8px; box-sizing: border-box;">
+                                    <textarea placeholder="Mô tả/Hướng dẫn sử dụng" data-resource-desc style="width: 100%; padding: 10px 12px; border: 1px solid #d6e0ec; border-radius: 8px; font-size: 14px; margin-bottom: 8px; resize: vertical; min-height: 60px; box-sizing: border-box;">${resource.description || ''}</textarea>
+                                    <input type="text" placeholder="URL tài liệu" data-resource-url value="${resource.url || ''}" style="width: 100%; padding: 10px 12px; border: 1px solid #d6e0ec; border-radius: 8px; font-size: 14px; margin-bottom: 8px; box-sizing: border-box;">
+                                    <button type="button" class="btn-remove-resource" onclick="document.getElementById('${resourceId}').remove()" style="display: block; width: 100%; padding: 8px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 8px;">Xóa tài liệu này</button>
+                                </div>
+                            `);
+                        });
+                    } else {
+                        addResourceField('edit');
+                    }
+                }
+                
+                window.closeDetailModal();
+                document.getElementById('editAssignmentModal').classList.add('active');
+            };
+            
+            window.closeDetailModal = function() {
+                document.getElementById('assignmentDetailModal').classList.remove('active');
+            };
+            
+            window.closeEditModal = function() {
+                document.getElementById('editAssignmentModal').classList.remove('active');
+                currentAssignmentId = null;
+            };
+            
+            window.updateAssignment = async function() {
+                if (!currentAssignmentId) { alert('Lỗi: Không có bài tập nào được chọn'); return; }
+                const editTitle = document.getElementById('editAssignTitle');
+                if (!editTitle.value.trim()) { alert('Vui lòng nhập tiêu đề bài tập'); return; }
+
+                try {
+                    const assignment = await GeoConnectApp.getAssignmentById(currentAssignmentId);
+                    if (!assignment) { alert('Lỗi: Không tìm thấy bài tập'); return; }
+
+                    const updates = {
+                        title: editTitle.value.trim(),
+                        description: document.getElementById('editAssignDesc').value.trim(),
+                    };
+                    if (assignment.type === 'quiz') {
+                        const questions = collectQuizQuestions('edit');
+                        if (questions.length === 0) { alert('Vui lòng thêm ít nhất 1 câu hỏi với 2 đáp án và chọn đáp án đúng'); return; }
+                        updates.questions = questions;
+                    } else {
+                        updates.attachments = collectResources('edit');
+                    }
+                    await GeoConnectApp.updateAssignment(currentAssignmentId, updates);
+                    alert('✅ Cập nhật bài tập thành công!');
+                    currentAssignmentId = null;
+                    window.closeEditModal();
+                    await window.loadAssignments();
+                } catch (error) {
+                    alert('Lỗi: ' + (error.data?.message || error.message));
+                }
+            };
+
+            window.deleteAssignmentConfirm = async function() {
+                if (!currentAssignmentId) return;
+                const assignment = await GeoConnectApp.getAssignmentById(currentAssignmentId);
+                if (!confirm('Xóa bài tập "' + assignment.title + '"?\nHành động này sẽ xóa tất cả bài nộp liên quan!')) return;
+                try {
+                    await GeoConnectApp.deleteAssignment(currentAssignmentId);
+                    alert('🗑️ Xóa bài tập thành công');
+                    currentAssignmentId = null;
+                    window.closeDetailModal();
+                    await window.loadAssignments();
+                } catch (err) {
+                    alert('Lỗi: ' + (err.data?.message || err.message));
+                }
+            };
+            
+            window.closeCreateModal = function() {
+                document.getElementById('createAssignmentModal').classList.remove('active');
+            };
+            
+            window.saveAssignment = async function() {
+                const classId = classSelect.value;
+                if (!classId) { alert('Vui lòng chọn lớp'); return; }
+                if (!assignTitle.value.trim()) { alert('Vui lòng nhập tiêu đề bài tập'); return; }
+
+                const assignmentType = assignType.value;
+                let questions = [];
+                let attachments = collectResources('add');
+                if (assignmentType === 'quiz') {
+                    questions = collectQuizQuestions();
+                    if (!questions.length) { alert('Vui lòng thêm ít nhất 1 câu hỏi trắc nghiệm'); return; }
+                } else if (assignmentType === 'essay') {
+                    questions = collectEssayQuestions();
+                    if (!questions.length) { alert('Vui lòng thêm ít nhất 1 câu hỏi tự luận'); return; }
+                }
+                // upload + attachment: chỉ cần attachments (có thể trống cho upload)
+
+                try {
+                    await GeoConnectApp.createAssignment(classId, {
+                        title: assignTitle.value.trim(),
+                        type: assignmentType,
+                        description: assignDesc.value.trim() || '',
+                        dueAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                        questions, attachments,
+                    });
+                    alert('✅ Tạo bài tập thành công!');
+                    assignTitle.value = ''; assignDesc.value = ''; assignType.value = 'regular';
+                    document.getElementById('resourcesList').innerHTML = '';
+                    document.getElementById('quizQuestionsList').innerHTML = '';
+                    addResourceField('add');
+                    document.getElementById('resourcesSection').style.display = 'block';
+                    document.getElementById('quizQuestionsSection').style.display = 'none';
+                    currentAssignmentId = null;
+                    window.closeCreateModal();
+                    await window.loadAssignments();
+                } catch (err) {
+                    alert('Lỗi: ' + (err.data?.message || err.message));
+                }
+            };
+            
+            btnCreateAssignmentModal.addEventListener('click', function() {
+                if (!classSelect.value) {
+                    alert('Vui lòng chọn lớp trước');
+                    return;
+                }
+                document.getElementById('resourcesList').innerHTML = '';
+                addResourceField('add');
+                document.getElementById('createAssignmentModal').classList.add('active');
+            });
+            
+            document.getElementById('createAssignmentModal').addEventListener('click', function(e) {
+                if (e.target === this) closeCreateModal();
+            });
+            
+            document.getElementById('assignmentDetailModal').addEventListener('click', function(e) {
+                if (e.target === this) closeDetailModal();
+            });
+            
+            document.getElementById('editAssignmentModal').addEventListener('click', function(e) {
+                if (e.target === this) closeEditModal();
+            });
+            
+            await loadClasses();
+            classSelect.addEventListener('change', loadAssignments);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const editAssignmentId = urlParams.get('edit');
+            if (editAssignmentId) {
+                const assignment = await GeoConnectApp.getAssignmentById(editAssignmentId).catch(() => null);
+                if (assignment) {
+                    classSelect.value = assignment.classId;
+                    currentClassId = assignment.classId;
+                    await window.loadAssignments();
+                    setTimeout(() => window.viewAssignmentDetail(editAssignmentId), 200);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

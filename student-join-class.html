@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tham gia lớp học | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .join-form { max-width: 400px; margin: 0 auto; }
+        .class-card { padding: 16px; background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 12px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
+        .class-card:hover { border-color: #8e44ad; box-shadow: 0 4px 12px rgba(142,68,173,0.08); }
+        .class-card.open { border-color: #8e44ad; box-shadow: 0 6px 16px rgba(142,68,173,0.12); }
+        .class-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .class-info { flex: 1; }
+        .class-info h3 { margin: 0; color: #8e44ad; }
+        .class-info .small-note { margin: 4px 0; }
+        .toggle-caret { font-size: 18px; color: #8e44ad; user-select: none; transition: transform 0.2s; }
+        .class-card.open .toggle-caret { transform: rotate(90deg); }
+        .class-expand { margin-top: 14px; padding-top: 14px; border-top: 1px dashed #e6d5ef; display: flex; gap: 10px; flex-wrap: wrap; }
+        .class-expand button { flex: 1; min-width: 160px; padding: 12px 14px; font-size: 14px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: transform 0.15s, box-shadow 0.15s; }
+        .class-expand button:hover { transform: translateY(-1px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+        .btn-lessons { background: #6c5ce7; color: white; }
+        .btn-practice { background: #8e44ad; color: white; }
+        .success-badge { display: inline-block; padding: 4px 8px; background: #d4edda; color: #155724; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .stats-banner { background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-around; text-align: center; }
+        .stat-box { flex: 1; }
+        .stat-box strong { display: block; font-size: 24px; margin-bottom: 4px; }
+        .stat-box span { display: block; font-size: 12px; opacity: 0.9; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Học sinh</div></div></div><div class="dashboard-nav"><a href="student-home.html">Quay lại cổng học sinh</a><a href="index.html">Trang chủ</a><a href="index.html" id="studentJoinLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>Tham gia lớp học</h1><p class="dashboard-subtitle">Nhập mã lớp để nhận bài tập và học cùng giáo viên.</p></div></div>
+            <section class="section-card" id="joinSection">
+                <h3 style="margin-bottom: 16px;">Nhập mã lớp</h3>
+                <div class="join-form">
+                    <div class="input-group" style="margin-bottom: 12px;">
+                        <label>Mã lớp (Ví dụ: GEO6A2025)</label>
+                        <input type="text" id="classCode" placeholder="Nhập mã lớp..." style="width:100%; padding:12px 14px; border:1px solid #d6e0ec; border-radius:12px; margin-top: 6px;">
+                    </div>
+                    <button class="btn-primary" id="btnJoin" style="width: 100%; margin-bottom: 8px;">Tham gia lớp</button>
+                    <button class="btn-outline" id="btnViewClasses" style="width: 100%;">Xem lớp đã tham gia</button>
+                </div>
+            </section>
+            <section class="section-card" id="classesSection" style="display:none;">
+                <h3 style="margin-bottom: 16px;">Lớp học đã tham gia</h3>
+                <div id="statsContainer" class="stats-banner" style="display:none;"></div>
+                <div id="enrolledClasses"></div>
+                <button class="btn-outline" id="btnBackJoin" style="margin-top:16px; width:100%;">Quay lại nhập mã</button>
+            </section>
+        </main>
+    </div>
+    <script>document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('student', 'login.html')) return;
+        GeoConnectApp.bindLogout('#studentJoinLogout');
+
+        const user = await GeoConnectApp.getCurrentUser();
+        const classCode = document.getElementById('classCode');
+        const btnJoin = document.getElementById('btnJoin');
+        const btnViewClasses = document.getElementById('btnViewClasses');
+        const btnBackJoin = document.getElementById('btnBackJoin');
+        const joinSection = document.getElementById('joinSection');
+        const classesSection = document.getElementById('classesSection');
+        const enrolledClasses = document.getElementById('enrolledClasses');
+        const statsContainer = document.getElementById('statsContainer');
+
+        btnJoin.addEventListener('click', async function() {
+            const code = classCode.value.trim();
+            if (!code) { alert('Vui lòng nhập mã lớp'); return; }
+            const classToJoin = await GeoConnectApp.getClassByCode(code);
+            if (!classToJoin) { alert('Mã lớp không tồn tại'); return; }
+            const result = await GeoConnectApp.enrollStudent(classToJoin.id, user.username);
+            if (result.ok) { alert('Tham gia lớp thành công: ' + classToJoin.name); classCode.value = ''; btnViewClasses.click(); }
+            else alert(result.message);
+        });
+
+        btnViewClasses.addEventListener('click', async function() {
+            const classes = await GeoConnectApp.getStudentClasses(user.username);
+            if (!classes.length) {
+                enrolledClasses.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">Bạn chưa tham gia lớp nào. Vui lòng nhập mã lớp để tham gia.</p>';
+                statsContainer.style.display = 'none';
+            } else {
+                const [progressLists, allUsers] = await Promise.all([
+                    Promise.all(classes.map(cls => GeoConnectApp.getClassProgress(cls.id).catch(() => []))),
+                    GeoConnectApp.getAllUsers(),
+                ]);
+                let totalAssignments = 0, completedAssignments = 0, scoreSum = 0, scoredCount = 0;
+                const myProgress = progressLists.map(list => list.find(p => p.studentUsername === user.username) || null);
+                myProgress.forEach(p => {
+                    if (p) {
+                        totalAssignments += p.totalAssignments;
+                        completedAssignments += p.completedAssignments;
+                        scoreSum += parseFloat(p.averageScore || 0) * p.gradedAssignments;
+                        scoredCount += p.gradedAssignments;
+                    }
+                });
+                const avgScore = scoredCount > 0 ? (scoreSum / scoredCount).toFixed(1) : 'N/A';
+                statsContainer.innerHTML = '<div class="stat-box"><strong>' + classes.length + '</strong><span>Lớp học</span></div><div class="stat-box"><strong>' + completedAssignments + '</strong><span>Bài đã nộp</span></div><div class="stat-box"><strong>' + avgScore + '</strong><span>Điểm TB</span></div>';
+                statsContainer.style.display = 'flex';
+
+                enrolledClasses.innerHTML = classes.map((cls, i) => {
+                    const progress = myProgress[i];
+                    const teacher = allUsers.find(u => u.username === cls.teacher);
+                    const cid = encodeURIComponent(cls.id);
+                    return `
+                        <div class="class-card" data-class-id="${cls.id}">
+                            <div class="class-header">
+                                <div class="class-info">
+                                    <h3>${cls.name}</h3>
+                                    <p class="small-note">📎 Mã lớp: ${cls.code}</p>
+                                    <p class="small-note">👨‍🏫 Giáo viên: ${teacher ? teacher.fullName : '—'}</p>
+                                    ${progress ? '<p class="small-note">📊 Tiến độ: ' + progress.completedAssignments + '/' + progress.totalAssignments + ' bài</p>' : ''}
+                                </div>
+                                <span class="toggle-caret" aria-hidden="true">▶</span>
+                            </div>
+                            <div class="class-expand" hidden>
+                                <button class="btn-lessons" data-action="lessons" data-class-id="${cid}">📖 Xem bài giảng</button>
+                                <button class="btn-practice" data-action="practice" data-class-id="${cid}">✏️ Làm bài tập</button>
+                            </div>
+                        </div>`;
+                }).join('');
+
+                // Event delegation cho accordion + action buttons
+                enrolledClasses.onclick = function (e) {
+                    const actionBtn = e.target.closest('button[data-action]');
+                    if (actionBtn) {
+                        e.stopPropagation();
+                        const cid = actionBtn.getAttribute('data-class-id');
+                        const target = actionBtn.getAttribute('data-action') === 'lessons'
+                            ? 'student-learn.html'
+                            : 'student-practice.html';
+                        window.location.href = target + '?classId=' + cid;
+                        return;
+                    }
+                    const card = e.target.closest('.class-card');
+                    if (!card) return;
+                    const expand = card.querySelector('.class-expand');
+                    const wasOpen = card.classList.contains('open');
+                    // Single-open: thu gọn các thẻ khác
+                    enrolledClasses.querySelectorAll('.class-card.open').forEach(c => {
+                        c.classList.remove('open');
+                        const ex = c.querySelector('.class-expand');
+                        if (ex) ex.hidden = true;
+                    });
+                    if (!wasOpen) {
+                        card.classList.add('open');
+                        if (expand) expand.hidden = false;
+                    }
+                };
+            }
+            joinSection.style.display = 'none';
+            classesSection.style.display = 'block';
+        });
+
+        btnBackJoin.addEventListener('click', function() {
+            joinSection.style.display = 'block';
+            classesSection.style.display = 'none';
+        });
+    });</script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khai báo học sinh | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .setup-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #0056b3 0%, #004085 100%); padding: 20px; }
+        .setup-card { background: white; border-radius: 12px; padding: 40px; max-width: 500px; width: 100%; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+        .setup-header { text-align: center; margin-bottom: 30px; }
+        .setup-header h1 { margin: 0 0 8px 0; font-size: 28px; color: #0056b3; }
+        .setup-header p { margin: 0; color: #666; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit; box-sizing: border-box; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #0056b3; box-shadow: 0 0 0 2px rgba(0,86,179,0.1); }
+        .student-list { margin-bottom: 20px; }
+        .student-option { padding: 12px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+        .student-option:hover { border-color: #0056b3; background: #f0f5ff; }
+        .student-option input[type="radio"] { margin-right: 10px; }
+        .info-box { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
+        .btn-submit { width: 100%; padding: 12px; background: #0056b3; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 16px; transition: background 0.2s; }
+        .btn-submit:hover { background: #004085; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+        .divider { text-align: center; margin: 20px 0; color: #999; }
+        .divider:after { content: 'HOẶC'; padding: 0 10px; background: white; }
+        .error-msg { color: #dc3545; font-size: 13px; margin-top: 6px; display: none; }
+        .tab-section { margin-bottom: 30px; }
+        .tabs2 { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .tab-btn2 { padding: 10px 16px; border: none; background: none; cursor: pointer; font-weight: 500; border-bottom: 3px solid transparent; color: #666; transition: all 0.2s; }
+        .tab-btn2.active { color: #0056b3; border-bottom-color: #0056b3; }
+        .tab-content2 { display: none; }
+        .tab-content2.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="setup-card">
+            <div class="setup-header">
+                <h1>🎓 Khai báo học sinh</h1>
+                <p>Nhập mã học sinh để theo dõi tiến độ học tập</p>
+            </div>
+
+            <div class="info-box">
+                📝 Nhập mã 5 chữ số mà học sinh đã được cấp khi tạo tài khoản.
+            </div>
+
+            <form id="setupForm">
+                <div class="form-group">
+                    <label>Mã học sinh</label>
+                    <input type="text" id="studentCode" placeholder="Ví dụ: 12345" inputmode="numeric" maxlength="5">
+                    <span class="error-msg" id="codeError">Mã học sinh không hợp lệ</span>
+                </div>
+
+                <button type="submit" class="btn-submit">✓ Tiếp tục</button>
+            </form>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="index.html" style="color: #0056b3; text-decoration: none; font-size: 13px;">← Quay lại trang chủ</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function handleSetupSubmit(e) {
+            e.preventDefault();
+            const code = document.getElementById('studentCode').value.trim();
+            const errEl = document.getElementById('codeError');
+
+            if (!code) { errEl.style.display = 'block'; errEl.textContent = 'Vui lòng nhập mã học sinh'; return; }
+            if (code.length !== 5 || isNaN(code)) {
+                errEl.style.display = 'block';
+                errEl.textContent = 'Mã học sinh phải là 5 chữ số';
+                return;
+            }
+
+            try {
+                // Tạo liên kết phụ huynh-học sinh qua mã
+                const link = await GeoConnectApp.linkParentStudent({ studentCode: code });
+                // Lưu selected student vào DB
+                await GeoConnectApp.setParentSession(link.studentUsername);
+                errEl.style.display = 'none';
+                window.location.href = 'parent-dashboard.html';
+            } catch (err) {
+                errEl.style.display = 'block';
+                errEl.textContent = (err.data && err.data.message) || err.message || 'Không thể liên kết học sinh';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (!await GeoConnectApp.ensureRoleAccess('parent', 'login.html')) return;
+            document.getElementById('setupForm').addEventListener('submit', handleSetupSubmit);
+        });
+    </script>
+</body>
+</html>

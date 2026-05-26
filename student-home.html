@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cổng học sinh | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .dashboard-banner { background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%); color: white; padding: 24px; border-radius: 8px; margin-bottom: 20px; }
+        .dashboard-banner h2 { margin: 0 0 8px 0; font-size: 24px; }
+        .dashboard-banner p { margin: 0; opacity: 0.9; }
+        .role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .role-card { display: flex; flex-direction: column; padding: 20px; background: white; border: 2px solid #eee; border-radius: 8px; text-decoration: none; color: inherit; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .role-card:hover { border-color: #8e44ad; box-shadow: 0 8px 16px rgba(142,68,173,0.15); transform: translateY(-2px); }
+        .role-pill { display: inline-block; background: #8e44ad; color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 12px; width: fit-content; }
+        .role-card h3 { margin: 0 0 8px 0; color: #8e44ad; font-size: 18px; }
+        .role-card p { margin: 0; color: #666; font-size: 13px; line-height: 1.5; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand">
+                <img src="logo.png" alt="GeoConnect 6">
+                <div>
+                    <strong>GeoConnect 6</strong>
+                    <div class="small-note">Cổng học sinh</div>
+                </div>
+            </div>
+            <div class="dashboard-nav">
+                <a href="index.html">Trang chủ</a>
+                <a href="student-join-class.html">Tham gia lớp</a>
+                <a href="student-learn.html">Học bài</a>
+                <a href="student-practice.html">Làm bài</a>
+                <a href="student-results.html">Kết quả học tập</a>
+                <a href="student-progress.html">Tiến độ học tập</a>
+                <a href="student-notifications.html">Thông báo</a>
+                <a href="index.html" id="studentHomeLogout">Đăng xuất</a>
+            </div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar">
+                <div>
+                    <h1>Cổng học sinh</h1>
+                    <p class="dashboard-subtitle">Tham gia lớp học, học bài, làm bài tập và theo dõi kết quả.</p>
+                </div>
+            </div>
+            <section class="page-shell" style="padding-top: 0;">
+                <div style="background: #f0f4f8; border-left: 4px solid #3498db; padding: 16px; border-radius: 6px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 12px; color: #666;">📌 Mã học sinh của em</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #3498db; font-family: monospace; letter-spacing: 2px;" id="studentCodeDisplay">-</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 4px;">Dùng mã này để giáo viên thêm em vào lớp hoặc chia sẻ với phụ huynh</div>
+                    </div>
+                    <button onclick="copyStudentCode()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s; height: fit-content;" onmouseover="this.style.background='#2980b9'" onmouseout="this.style.background='#3498db'">📋 Sao chép</button>
+                </div>
+                <div class="dashboard-banner">
+                    <h2>Chào mừng em đến GeoConnect 6! 🎓</h2>
+                    <p>Chọn một chức năng bên dưới để bắt đầu quá trình học tập của em.</p>
+                </div>
+                <h3 style="margin-bottom: 16px;">Học tập và nộp bài</h3>
+                <div class="role-grid">
+                    <a class="role-card" href="student-join-class.html">
+                        <div class="role-pill">📚 Lớp học</div>
+                        <h3>Tham gia lớp học</h3>
+                        <p>Nhập mã lớp, xem các lớp đã tham gia, mở bài giảng và bài tập cho từng lớp.</p>
+                    </a>
+                    <a class="role-card" href="student-results.html">
+                        <div class="role-pill">📊 Kết quả</div>
+                        <h3>Xem kết quả học tập</h3>
+                        <p>Theo dõi điểm số, tiến độ học tập và nhiệm vụ đã hoàn thành.</p>
+                    </a>
+                    <a class="role-card" href="student-progress.html">
+                        <div class="role-pill">📈 Tiến độ</div>
+                        <h3>Biểu đồ tiến độ</h3>
+                        <p>Xem quá trình học theo lớp, thống kê bài làm và hoàn thành.</p>
+                    </a>
+                    <a class="role-card" href="student-notifications.html">
+                        <div class="role-pill">🔔 Thông báo</div>
+                        <h3>Xem thông báo</h3>
+                        <p>Nhận thông báo về bài tập mới, điểm số và thông báo từ giáo viên.</p>
+                    </a>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (!await GeoConnectApp.ensureRoleAccess('student', 'login.html')) return;
+            GeoConnectApp.bindLogout('#studentHomeLogout');
+
+            const user = await GeoConnectApp.getCurrentUser();
+            if (user && user.studentCode) {
+                document.getElementById('studentCodeDisplay').textContent = user.studentCode;
+            }
+        });
+        
+        function copyStudentCode() {
+            const studentCode = document.getElementById('studentCodeDisplay').textContent;
+            if (studentCode && studentCode !== '-') {
+                navigator.clipboard.writeText(studentCode).then(() => {
+                    alert('✅ Đã sao chép mã học sinh: ' + studentCode);
+                }).catch(() => {
+                    alert('❌ Không thể sao chép. Vui lòng sao chép thủ công: ' + studentCode);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

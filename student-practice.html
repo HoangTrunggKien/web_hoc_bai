@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Làm bài | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .quiz-header { background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .quiz-timer { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; }
+        .quiz-progress { width: 100%; background: #f0f0f0; height: 8px; border-radius: 4px; margin-bottom: 16px; }
+        .quiz-progress-bar { background: #8e44ad; height: 100%; border-radius: 4px; transition: width 0.3s; }
+        .question-container { background: white; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .question-number { display: inline-block; background: #8e44ad; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-bottom: 12px; }
+        .question-text { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px; }
+        .option { padding: 12px; background: #f5f7fa; border: 2px solid transparent; border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+        .option:hover { border-color: #8e44ad; background: #f0e6ff; }
+        .option.selected { border-color: #8e44ad; background: #e6d5ff; }
+        .option input { margin-right: 8px; }
+        .text-answer { width: 100%; padding: 12px; border: 2px solid #d6e0ec; border-radius: 8px; font-family: inherit; font-size: 14px; }
+        .text-answer:focus { outline: none; border-color: #8e44ad; }
+        .buttons-row { display: flex; gap: 12px; margin-top: 20px; }
+        .score-badge { display: inline-block; padding: 8px 16px; background: #d4edda; color: #155724; border-radius: 8px; font-weight: 600; font-size: 14px; }
+        .score-badge.medium { background: #fff3cd; color: #856404; }
+        .score-badge.low { background: #f8d7da; color: #721c24; }
+        .result-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .result-item { padding: 12px; background: #f5f7fa; border-left: 4px solid #8e44ad; border-radius: 4px; margin-bottom: 10px; }
+        .result-correct { border-left-color: #27ae60; background: #d4edda; }
+        .result-wrong { border-left-color: #d32f2f; background: #f8d7da; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Học sinh</div></div></div><div class="dashboard-nav"><a href="student-home.html">Quay lại cổng học sinh</a><a href="index.html">Trang chủ</a><a href="index.html" id="studentPracticeLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>Làm bài tập</h1><p class="dashboard-subtitle">Hoàn thành bài tập và kiểm tra nhanh ngay trên hệ thống.</p></div></div>
+            <section class="section-card" id="assignmentListSection">
+                <div id="classScopeBar" style="display:none; margin-bottom:12px; padding:10px 14px; background:#f3e9fa; border-left:4px solid #8e44ad; border-radius:6px; align-items:center; justify-content:space-between; gap:12px;">
+                    <span id="classScopeLabel" style="color:#5b2c6f; font-weight:600;"></span>
+                    <a href="student-join-class.html" class="btn-outline" style="padding:6px 12px; font-size:13px; text-decoration:none;">← Quay lại danh sách lớp</a>
+                </div>
+                <h3 style="margin-bottom: 16px;">Danh sách bài tập</h3>
+                <div class="assignment-grid" id="assignmentList"></div>
+            </section>
+            <section class="section-card" id="quizSection" style="display:none;">
+                <button class="btn-outline" id="btnBackList" style="margin-bottom: 16px;">← Quay lại danh sách</button>
+                <div class="quiz-header">
+                    <h2 id="quizTitle" style="margin: 0;"></h2>
+                    <div class="quiz-timer" id="quizTimer"></div>
+                </div>
+                <div class="quiz-progress">
+                    <div class="quiz-progress-bar" id="progressBar" style="width: 0%;"></div>
+                </div>
+                <div id="quizContent"></div>
+            </section>
+            <section class="section-card" id="resultSection" style="display:none;">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0 0 16px 0; color: #8e44ad;">Kết quả nộp bài</h2>
+                    <div id="resultScore" style="font-size: 48px; font-weight: 600; color: #8e44ad; margin: 16px 0;">0/0</div>
+                    <div id="resultBadge" class="score-badge"></div>
+                </div>
+                <div id="resultDetail"></div>
+                <div id="uploadSection" style="background: white; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin: 20px 0; display: none;">
+                    <h3 style="margin-top: 0; color: #8e44ad; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">📤 Nộp bài làm (tùy chọn)</h3>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 12px;">Bạn có thể tải lên tệp bài làm của mình (Word, PDF, hình ảnh, v.v.)</p>
+                    <div style="border: 2px dashed #8e44ad; border-radius: 8px; padding: 20px; text-align: center; background: #f8f6ff;">
+                        <input type="file" id="submissionFileInput" style="display: none;">
+                        <button class="btn-secondary" onclick="document.getElementById('submissionFileInput').click()" style="margin-bottom: 12px;">📎 Chọn tệp</button>
+                        <div id="fileNameDisplay" style="font-size: 12px; color: #666; margin-top: 8px;">Chưa chọn tệp nào</div>
+                    </div>
+                    <button class="btn-success" id="btnUploadFile" onclick="uploadSubmissionFile()" style="margin-top: 12px; width: 100%;">Tải lên bài làm</button>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button class="btn-primary" id="btnBackHome" style="flex: 1;">Quay về cổng học sinh</button>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script>
+        let user = null;
+        let allAssignments = [];
+        let allSubmissions = [];
+        let currentQuestions = [];
+        let currentAnswers = [];
+        let currentAssignment = null;
+        let assignmentList, quizSection, quizContent, assignmentListSection, quizTitle;
+
+        document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('student', 'login.html')) return;
+        GeoConnectApp.bindLogout('#studentPracticeLogout');
+
+        user = await GeoConnectApp.getCurrentUser();
+        assignmentList = document.getElementById('assignmentList');
+        quizSection = document.getElementById('quizSection');
+        quizContent = document.getElementById('quizContent');
+        assignmentListSection = document.getElementById('assignmentListSection');
+        quizTitle = document.getElementById('quizTitle');
+
+        const params = new URLSearchParams(window.location.search);
+        const classIdParam = params.get('classId');
+        const studentClasses = await GeoConnectApp.getStudentClasses(user.username);
+        const scopedClass = classIdParam
+            ? studentClasses.find(c => String(c.id) === String(classIdParam))
+            : null;
+        const targetClasses = scopedClass ? [scopedClass] : studentClasses;
+
+        // Hiển thị badge tên lớp nếu đang scope
+        if (scopedClass) {
+            const scopeBar = document.getElementById('classScopeBar');
+            const scopeLabel = document.getElementById('classScopeLabel');
+            scopeBar.style.display = 'flex';
+            scopeLabel.textContent = '✏️ Bài tập — Lớp: ' + scopedClass.name + ' (' + scopedClass.code + ')';
+        }
+
+        const lists = await Promise.all(targetClasses.map(c => GeoConnectApp.getAssignments(c.id)));
+        allAssignments = [].concat(...lists);
+        allSubmissions = await GeoConnectApp.getStudentSubmissions(user.username);
+
+        if (!allAssignments.length) {
+            assignmentList.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Bạn chưa có bài tập nào</p>';
+        } else {
+            assignmentList.innerHTML = allAssignments.map(assignment => {
+                const submitted = allSubmissions.some(s => s.assignmentId === assignment.id);
+                const type = assignment.type || 'attachment';
+                const titleEsc = assignment.title.replace(/'/g, "\\'");
+                const badge = submitted ? '<span style="display:inline-block; background:#d4edda; color:#155724; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; margin-left:8px;">✓ Đã nộp</span>' : '';
+                const typeLabels = {
+                    quiz: '❓ Trắc nghiệm', essay: '✍️ Tự luận',
+                    upload: '📤 Nộp file', attachment: '📎 Tài liệu',
+                };
+                const typeLabel = typeLabels[type] || '📝 Bài tập';
+
+                let onclick = '', btnText = '';
+                if (type === 'quiz') {
+                    onclick = "startQuiz('" + assignment.id + "', '" + titleEsc + "')";
+                    btnText = submitted ? 'Xem lại' : 'Làm bài';
+                } else if (type === 'essay') {
+                    onclick = "startEssay('" + assignment.id + "', '" + titleEsc + "')";
+                    btnText = submitted ? 'Xem lại' : 'Làm bài';
+                } else if (type === 'upload') {
+                    onclick = "submitAssignmentWithFile('" + assignment.id + "', '" + titleEsc + "')";
+                    btnText = submitted ? 'Xem lại' : 'Nộp file';
+                } else {
+                    // attachment hoặc legacy
+                    onclick = "showAssignmentDetail('" + assignment.id + "')";
+                    btnText = 'Xem chi tiết';
+                }
+
+                return '<div class="assignment-card"><h3>' + assignment.title + badge + '</h3>' +
+                    '<p style="font-size: 12px; color: #666; margin: 8px 0;">(' + typeLabel + ')</p>' +
+                    '<button class="' + (submitted ? 'btn-secondary' : 'btn-success') +
+                    '" onclick="' + onclick + '" style="margin-top:12px; width:100%">' + btnText + '</button></div>';
+            }).join('');
+        }
+        
+        window.showAssignmentDetail = function(assignmentId) {
+            currentAssignment = allAssignments.find(a => a.id === assignmentId);
+            if (!currentAssignment) return;
+            
+            let detailHtml = '<div style="background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;"><h2 style="margin: 0 0 8px 0;">' + currentAssignment.title + '</h2></div>';
+            
+            // Phần đề bài/file chính
+            if (currentAssignment.assignmentUrl && currentAssignment.assignmentUrl.trim() !== '') {
+                detailHtml += '<div style="background: #f0f7ff; border: 1px solid #3498db; border-radius: 12px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #3498db;"><h3 style="margin-top: 0; color: #2980b9;">📋 Đề bài</h3><p style="color:#555;">Nhấn nút bên dưới để truy cập hoặc tải về đề bài:</p><a href="' + currentAssignment.assignmentUrl + '" target="_blank" class="btn-success" style="display:inline-block; text-decoration:none; padding:8px 16px; margin-right:8px;"><strong>🔗 Truy cập đề bài</strong></a></div>';
+            }
+            
+            detailHtml += '<div style="background: white; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 16px;"><h3 style="margin-top: 0; color: #8e44ad; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">ℹ️ Thông tin bài tập</h3>';
+            detailHtml += '<p><strong>Mô tả:</strong> ' + (currentAssignment.description || 'Không có mô tả') + '</p>';
+            detailHtml += '</div>';
+            
+            if (currentAssignment.resources && currentAssignment.resources.length > 0) {
+                detailHtml += '<div style="background: white; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 16px;"><h3 style="margin-top: 0; color: #8e44ad; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">📎 Tài liệu bổ sung</h3>';
+                detailHtml += '<div style="display: flex; flex-direction: column; gap: 10px;">';
+                currentAssignment.resources.forEach((resource, idx) => {
+                    const icons = { 'video': '🎥', 'pdf': '📄', 'image': '🖼️', 'link': '🔗', 'document': '📝' };
+                    const icon = icons[resource.type] || '📎';
+                    
+                    // Nếu resource có URL
+                    if (resource.url && resource.url.trim() !== '') {
+                        detailHtml += '<div style="padding: 12px; background: #f5f7fa; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;"><div><strong>' + icon + ' ' + resource.name + '</strong><div style="font-size: 12px; color: #666; margin-top: 4px;">' + (resource.description || '') + '</div></div><a href="' + resource.url + '" target="_blank" class="btn-success" style="text-decoration:none; padding: 6px 12px; font-size: 12px; margin: 0; display:inline-block;"><strong>🔗 Truy cập</strong></a></div>';
+                    } else {
+                        detailHtml += '<div style="padding: 12px; background: #f5f7fa; border-radius: 8px;"><strong>' + icon + ' ' + resource.name + '</strong><div style="font-size: 12px; color: #666; margin-top: 4px;">' + (resource.description || '') + '</div></div>';
+                    }
+                });
+                detailHtml += '</div></div>';
+            }
+            
+            
+            const showSubmitBtn = currentAssignment.type !== 'attachment';
+            detailHtml += '<div style="display: flex; gap: 12px; margin-top: 20px;">';
+            detailHtml += '<button class="btn-secondary" onclick="backToList()" style="flex: 1;">← Quay lại</button>';
+            if (showSubmitBtn) {
+                detailHtml += '<button class="btn-success" onclick="submitAssignmentWithFile(\'' + currentAssignment.id + '\', \'' + currentAssignment.title.replace(/'/g, "\\'") + '\')" style="flex: 1;">📤 Nộp bài tập</button>';
+            }
+            detailHtml += '</div>';
+            
+            document.getElementById('assignmentListSection').innerHTML = '<section class="section-card">' + detailHtml + '</section>';
+        };
+        
+        window.backToList = function() {
+            location.reload();
+        };
+        
+        window.submitAssignmentWithFile = function(assignmentId, title) {
+            const assignment = allAssignments.find(a => a.id === assignmentId);
+            if (!assignment) {
+                alert('Không tìm thấy bài tập');
+                return;
+            }
+
+            quizTitle.textContent = 'Nộp bài: ' + title;
+            
+            let uploadHtml = `
+                <div style="background: white; border: 1px solid #eee; border-radius: 12px; padding: 20px;">
+                    <h3 style="margin-top: 0; color: #8e44ad; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">📤 Nộp bài làm</h3>
+                    <p style="color: #666;">Tải lên file bài làm của bạn (Word, PDF, hình ảnh, v.v.)</p>
+                    <div style="border: 2px dashed #8e44ad; border-radius: 8px; padding: 30px; text-align: center; background: #f8f6ff; margin: 20px 0;">
+                        <input type="file" id="submissionFileInputNew" style="display: none;">
+                        <button class="btn-secondary" onclick="document.getElementById('submissionFileInputNew').click()" style="margin-bottom: 12px; padding: 12px 24px; font-size: 16px; cursor: pointer;">📎 Chọn file bài làm</button>
+                        <div id="fileNameDisplay" style="font-size: 14px; color: #666; margin-top: 12px;">Chưa chọn file nào</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 8px;">Định dạng: .doc, .docx, .pdf, .png, .jpg, .txt, v.v.</div>
+                    </div>
+                </div>
+                <div class="buttons-row" style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button class="btn-secondary" onclick="window.backToList()" style="flex: 1; padding: 12px; cursor: pointer;">← Quay lại</button>
+                    <button class="btn-success" id="btnSubmitFile" style="flex: 1; padding: 12px; cursor: pointer;">✓ Nộp bài</button>
+                </div>
+            `;
+            
+            document.getElementById('quizContent').innerHTML = uploadHtml;
+            assignmentListSection.style.display = 'none';
+            quizSection.style.display = 'block';
+            window.currentAssignmentId = assignmentId;
+
+            document.getElementById('submissionFileInputNew').addEventListener('change', window.updateFileNameDisplay);
+            document.getElementById('btnSubmitFile').addEventListener('click', function() {
+                window.finalizeSubmitFile(assignmentId);
+            });
+
+            window.scrollTo(0, 0);
+        };
+
+        window.updateFileNameDisplay = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            window.selectedSubmissionFileObj = file;
+            document.getElementById('fileNameDisplay').textContent = '✓ Đã chọn: ' + file.name + ' (' + (file.size / 1024).toFixed(2) + ' KB)';
+        };
+
+        window.finalizeSubmitFile = async function(assignmentId) {
+            const file = window.selectedSubmissionFileObj;
+            if (!file) { alert('Vui lòng chọn file trước khi nộp bài!'); return; }
+
+            const btn = document.getElementById('btnSubmitFile');
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ Đang tải lên...'; btn.disabled = true;
+            try {
+                const meta = await GeoConnectApp.uploadFile(file);
+                await GeoConnectApp.submitAssignment(assignmentId, user.username, [], meta);
+                document.getElementById('quizContent').innerHTML = `
+                    <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 12px; padding: 24px; text-align: center;">
+                        <h2 style="margin: 0 0 16px 0; color: #155724;">✓ Nộp bài thành công!</h2>
+                        <p style="color: #155724; font-size: 16px; margin: 8px 0;">Bài làm của bạn: <strong>${file.name}</strong></p>
+                        <p style="color: #155724; font-size: 14px; margin: 8px 0;">Đã nộp lúc: ${new Date().toLocaleString('vi-VN')}</p>
+                        <button class="btn-primary" onclick="location.reload()" style="margin-top: 16px; padding: 12px 24px; font-size: 16px; cursor: pointer;">← Quay về danh sách bài tập</button>
+                    </div>`;
+                window.selectedSubmissionFileObj = null;
+            } catch (err) {
+                btn.textContent = originalText; btn.disabled = false;
+                alert('Nộp bài thất bại: ' + (err.data?.message || err.message));
+            }
+        };
+        
+        
+        window.startAssignment = function(assignmentId, title) {
+            const assignment = allAssignments.find(a => a.id === assignmentId);
+            if (!assignment) return;
+            
+            quizTitle.textContent = title;
+            currentQuestions = assignment.questions || [];
+            currentAnswers = new Array(currentQuestions.length).fill('');
+            
+            renderQuiz();
+            assignmentListSection.style.display = 'none';
+            quizSection.style.display = 'block';
+            window.currentAssignmentId = assignmentId;
+            window.scrollTo(0, 0);
+        };
+        
+        window.startQuiz = function(assignmentId, title) {
+            const assignment = allAssignments.find(a => a.id === assignmentId);
+            if (!assignment) return;
+            
+            if (assignment.type !== 'quiz') {
+                showAssignmentDetail(assignmentId);
+                return;
+            }
+            
+            quizTitle.textContent = '❓ ' + title;
+            currentQuestions = assignment.questions || [];
+            currentAnswers = new Array(currentQuestions.length).fill('');
+            window.currentQuizQuestions = currentQuestions;
+            
+            renderQuizAssignment();
+            assignmentListSection.style.display = 'none';
+            quizSection.style.display = 'block';
+            window.currentAssignmentId = assignmentId;
+            window.currentAssignmentTitle = title;
+            window.scrollTo(0, 0);
+        };
+        
+        function renderQuiz() {
+            let quizHtml = '';
+            currentQuestions.forEach((q, index) => {
+                quizHtml += '<div class="question-container"><div class="question-number">Câu ' + (index + 1) + '/' + currentQuestions.length + '</div><p class="question-text">' + q.question + '</p>';
+                
+                if (q.options) {
+                    q.options.forEach((option, optIndex) => {
+                        const isSelected = currentAnswers[index] !== '' && Number(currentAnswers[index]) === optIndex;
+                        quizHtml += '<div class="option ' + (isSelected ? 'selected' : '') + '" onclick="selectOption(' + index + ', ' + optIndex + ')"><label><input type="radio" name="q' + index + '" value="' + optIndex + '" ' + (isSelected ? 'checked' : '') + ' style="margin-right:8px;">' + option + '</label></div>';
+                    });
+                } else {
+                    quizHtml += '<input type="text" data-question="' + index + '" class="text-answer" placeholder="Nhập câu trả lời..." value="' + (currentAnswers[index] || '') + '" onchange="updateAnswer(' + index + ', this.value)">';
+                }
+                quizHtml += '</div>';
+            });
+            
+            quizContent.innerHTML = quizHtml;
+            updateProgress();
+        }
+
+        function renderQuizAssignment() {
+            let quizHtml = '';
+            currentQuestions.forEach((q, index) => {
+                quizHtml += '<div class="question-container"><div class="question-number">Câu ' + (index + 1) + '/' + currentQuestions.length + '</div><p class="question-text">' + q.question + '</p>';
+                
+                q.options.forEach((option, optIndex) => {
+                    const isSelected = currentAnswers[index] !== '' && Number(currentAnswers[index]) === optIndex;
+                    quizHtml += '<div class="option ' + (isSelected ? 'selected' : '') + '" onclick="selectQuizOption(' + index + ', ' + optIndex + ')"><label><input type="radio" name="q' + index + '" value="' + optIndex + '" ' + (isSelected ? 'checked' : '') + ' style="margin-right:8px;">' + option + '</label></div>';
+                });
+                quizHtml += '</div>';
+            });
+            
+            quizHtml += '<div class="buttons-row" style="display: flex; gap: 12px; margin-top: 20px;"><button class="btn-secondary" onclick="backToList()" style="flex: 1;">← Hủy</button><button class="btn-success" onclick="submitQuiz()" style="flex: 1;">✓ Nộp bài</button></div>';
+            
+            quizContent.innerHTML = quizHtml;
+            updateProgress();
+        }
+        
+        // ==================== ESSAY ====================
+        window.startEssay = function(assignmentId, title) {
+            const assignment = allAssignments.find(a => a.id === assignmentId);
+            if (!assignment) return;
+            if (assignment.type !== 'essay') { showAssignmentDetail(assignmentId); return; }
+
+            quizTitle.textContent = '✍️ ' + title;
+            currentQuestions = assignment.questions || [];
+            currentAnswers = new Array(currentQuestions.length).fill('');
+            window.currentEssayQuestions = currentQuestions;
+            window.currentAssignmentId = assignmentId;
+            window.currentAssignmentTitle = title;
+
+            renderEssayAssignment();
+            assignmentListSection.style.display = 'none';
+            quizSection.style.display = 'block';
+            window.scrollTo(0, 0);
+        };
+
+        function renderEssayAssignment() {
+            let html = '';
+            currentQuestions.forEach((q, idx) => {
+                html += '<div class="question-container">';
+                html += '<div class="question-number">Câu ' + (idx + 1) + '/' + currentQuestions.length + '</div>';
+                html += '<p class="question-text">' + q.question + '</p>';
+                html += '<textarea class="text-answer" data-essay-answer="' + idx + '" placeholder="Viết câu trả lời của bạn..." style="min-height:120px; resize:vertical;" oninput="updateEssayAnswer(' + idx + ', this.value)">' + (currentAnswers[idx] || '') + '</textarea>';
+                html += '</div>';
+            });
+            html += '<div class="buttons-row" style="display:flex; gap:12px; margin-top:20px;"><button class="btn-secondary" onclick="backToList()" style="flex:1;">← Hủy</button><button class="btn-success" onclick="submitEssay()" style="flex:1;">✓ Nộp bài</button></div>';
+            quizContent.innerHTML = html;
+            updateProgress();
+        }
+        window.updateEssayAnswer = function(idx, value) {
+            currentAnswers[idx] = value;
+            updateProgress();
+        };
+
+        // Auto-grade essay theo tỷ lệ keyword khớp.
+        function gradeEssayLocally(questions, answers) {
+            let totalKeywords = 0, matchedKeywords = 0;
+            const perQuestion = [];
+            questions.forEach((q, i) => {
+                const ans = (answers[i] || '').toLowerCase();
+                const kws = (q.keywords || []).map(k => k.toLowerCase()).filter(Boolean);
+                let matched = 0;
+                kws.forEach(k => { if (ans.includes(k)) matched++; });
+                totalKeywords += kws.length;
+                matchedKeywords += matched;
+                perQuestion.push({
+                    question: q.question,
+                    answer: answers[i] || '',
+                    sampleAnswer: q.sampleAnswer || '',
+                    keywords: q.keywords || [],
+                    matched, total: kws.length,
+                });
+            });
+            const score = totalKeywords > 0 ? Math.round((matchedKeywords / totalKeywords) * 100) / 10 : 0;
+            return { score, perQuestion, totalKeywords, matchedKeywords };
+        }
+
+        window.submitEssay = async function() {
+            const assignment = allAssignments.find(a => a.id === window.currentAssignmentId);
+            if (!assignment || assignment.type !== 'essay') { alert('Lỗi: Bài tập không hợp lệ'); return; }
+            if (!confirm('Xác nhận nộp bài? Hệ thống sẽ tự động chấm điểm dựa trên từ khóa khớp.')) return;
+
+            const result = gradeEssayLocally(window.currentEssayQuestions, currentAnswers);
+            const feedback = '🤖 Chấm tự động: khớp ' + result.matchedKeywords + '/' + result.totalKeywords + ' từ khóa.';
+
+            try {
+                const submission = await GeoConnectApp.submitAssignment(window.currentAssignmentId, user.username, currentAnswers, null);
+                if (submission && submission.id) {
+                    try { await GeoConnectApp.gradeSubmission(submission.id, result.score, feedback); } catch {}
+                }
+                showEssayResult(result, feedback);
+            } catch (err) {
+                alert('Nộp bài thất bại: ' + (err.data?.message || err.message));
+            }
+        };
+
+        function showEssayResult(result, feedback) {
+            let html = '<div style="text-align:center; margin-bottom:24px;"><h2 style="margin:0 0 16px 0; color:#8e44ad;">✓ Nộp bài thành công!</h2>';
+            html += '<div style="font-size:48px; font-weight:600; color:#8e44ad; margin:16px 0;">' + result.score + '/10</div>';
+            html += '<div class="score-badge">' + feedback + '</div></div>';
+
+            html += '<div>';
+            result.perQuestion.forEach((d, i) => {
+                const matchPct = d.total > 0 ? Math.round((d.matched / d.total) * 100) : 0;
+                html += '<div class="result-card">';
+                html += '<div style="font-weight:600; margin-bottom:8px;">Câu ' + (i + 1) + ': ' + d.question + '</div>';
+                html += '<div class="result-item"><div style="font-size:12px; color:#666; margin-bottom:4px;"><strong>Bạn trả lời:</strong></div><div style="white-space:pre-wrap;">' + (d.answer || '(chưa trả lời)') + '</div></div>';
+                if (d.keywords.length > 0) {
+                    html += '<div style="margin-top:8px; font-size:13px;"><strong>Từ khóa:</strong> ';
+                    d.keywords.forEach(k => {
+                        const has = (d.answer || '').toLowerCase().includes(k.toLowerCase());
+                        html += '<span style="display:inline-block; padding:2px 8px; margin:2px; border-radius:4px; background:' + (has ? '#d4edda' : '#f8d7da') + '; color:' + (has ? '#155724' : '#721c24') + '; font-size:12px;">' + (has ? '✓' : '✗') + ' ' + k + '</span>';
+                    });
+                    html += '<span style="float:right; color:#666; font-size:12px;">Khớp: ' + d.matched + '/' + d.total + ' (' + matchPct + '%)</span></div>';
+                }
+                if (d.sampleAnswer) {
+                    html += '<div style="margin-top:8px; padding:10px; background:#fff3cd; border-radius:6px; font-size:13px;"><strong>Đáp án mẫu:</strong> ' + d.sampleAnswer + '</div>';
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+            html += '<div style="display:flex; gap:12px; margin-top:16px;"><button class="btn-primary" onclick="location.href=\'student-home.html\'" style="flex:1;">← Quay về cổng học sinh</button></div>';
+            quizContent.innerHTML = html;
+        }
+
+        window.selectQuizOption = function(questionIndex, optionIndex) {
+            currentAnswers[questionIndex] = optionIndex;
+            renderQuizAssignment();
+        };
+        
+        window.selectOption = function(questionIndex, optionIndex) {
+            currentAnswers[questionIndex] = optionIndex;
+            renderQuiz();
+        };
+        
+        window.updateAnswer = function(questionIndex, value) {
+            currentAnswers[questionIndex] = value;
+            updateProgress();
+        };
+        
+        function updateProgress() {
+            const answered = currentAnswers.filter(a => a !== '').length;
+            const percentage = (answered / currentQuestions.length) * 100;
+            document.getElementById('progressBar').style.width = percentage + '%';
+            document.getElementById('quizTimer').textContent = '📊 ' + answered + '/' + currentQuestions.length + ' câu';
+        }
+        
+        window.submitQuiz = async function() {
+            const assignment = allAssignments.find(a => a.id === window.currentAssignmentId);
+            if (!assignment || assignment.type !== 'quiz') { alert('Lỗi: Bài tập không hợp lệ'); return; }
+            if (!confirm('Xác nhận nộp bài? Bạn sẽ không thể sửa đổi sau đó.')) return;
+
+            let correctCount = 0;
+            const details = [];
+            currentAnswers.forEach((answer, index) => {
+                const question = window.currentQuizQuestions[index];
+                const isCorrect = parseInt(answer) === question.correctAnswer;
+                if (isCorrect) correctCount++;
+                details.push({
+                    question: question.question,
+                    selectedAnswer: parseInt(answer) >= 0 && question.options ? question.options[parseInt(answer)] : 'Không trả lời',
+                    correctAnswer: question.options ? question.options[question.correctAnswer] : '',
+                    isCorrect,
+                });
+            });
+
+            const totalQuestions = window.currentQuizQuestions.length;
+            const scoreOutOfTen = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) / 10 : 0;
+
+            try {
+                const submission = await GeoConnectApp.submitAssignment(window.currentAssignmentId, user.username, currentAnswers, null);
+                // Tự chấm điểm bằng PATCH submission
+                if (submission && submission.id) {
+                    try { await GeoConnectApp.gradeSubmission(submission.id, scoreOutOfTen, ''); } catch {}
+                }
+                showQuizResults(correctCount, totalQuestions, details);
+            } catch (err) {
+                alert('Nộp bài thất bại: ' + (err.data?.message || err.message));
+            }
+        };
+        
+        window.showQuizResults = function(score, totalQuestions, details) {
+            const percentage = Math.round((score / totalQuestions) * 100);
+            let statusClass = 'score-badge';
+            let statusText = '✓ Hoàn thành tiêu chí';
+            
+            if (percentage >= 80) {
+                statusClass = 'score-badge';
+                statusText = '🌟 Tuyệt vời! Bạn làm rất tốt';
+            } else if (percentage >= 60) {
+                statusClass = 'score-badge medium';
+                statusText = '👍 Khá tốt, hãy cố gắng thêm';
+            } else {
+                statusClass = 'score-badge low';
+                statusText = '📚 Hãy ôn lại lý thuyết';
+            }
+            
+            let resultHtml = `
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h2 style="margin: 0 0 16px 0; color: #8e44ad;">✓ Nộp bài thành công!</h2>
+                    <div id="resultScore" style="font-size: 48px; font-weight: 600; color: #8e44ad; margin: 16px 0;">${score}/${totalQuestions}</div>
+                    <div id="resultBadge" class="${statusClass}">${statusText}</div>
+                    <p style="color: #666; margin-top: 12px; font-size: 14px;">Điểm: ${percentage}%</p>
+                </div>
+                <div id="resultDetail">
+            `;
+            
+            details.forEach((detail, idx) => {
+                const resultClass = detail.isCorrect ? 'result-correct' : 'result-wrong';
+                resultHtml += `
+                    <div class="result-card">
+                        <div style="margin-bottom: 8px; ${detail.isCorrect ? 'color: #27ae60;' : 'color: #d32f2f;'} font-weight: 600;">
+                            ${detail.isCorrect ? '✓' : '✗'} Câu ${idx + 1}: ${detail.question}
+                        </div>
+                        <div class="result-item ${resultClass}">
+                            <div style="font-size: 12px; margin-bottom: 4px;"><strong>Bạn chọn:</strong></div>
+                            <div>${detail.selectedAnswer}</div>
+                            ${!detail.isCorrect ? `
+                                <div style="font-size: 12px; margin-top: 8px;"><strong>Đáp án đúng:</strong></div>
+                                <div>${detail.correctAnswer}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultHtml += `
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button class="btn-primary" id="btnBackHome" onclick="location.href='student-home.html'" style="flex: 1;">← Quay về cổng học sinh</button>
+                </div>
+            `;
+            
+            quizContent.innerHTML = resultHtml;
+        };
+        
+        document.getElementById('btnBackHome').addEventListener('click', function() {
+            window.location.href = 'student-home.html';
+        });
+    });</script>
+</body>
+</html>

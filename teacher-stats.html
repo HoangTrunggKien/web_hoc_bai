@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống kê | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .stat-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .stat-card strong { display: block; font-size: 32px; color: #27ae60; margin-bottom: 6px; }
+        .stat-card span { display: block; font-size: 13px; color: #666; }
+        .chart-card { background: white; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .chart-card h3 { margin: 0 0 16px 0; color: #27ae60; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .chart-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
+        .chart-canvas-wrap { position: relative; height: 280px; }
+        .completion-table { width: 100%; border-collapse: collapse; }
+        .completion-table th, .completion-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; }
+        .completion-table th { background: #f8f9fa; font-weight: 600; font-size: 13px; color: #555; }
+        .completion-bar { background: #f0f0f0; height: 8px; border-radius: 4px; margin-top: 4px; overflow: hidden; }
+        .completion-fill { background: linear-gradient(90deg, #27ae60, #20c997); height: 100%; transition: width 0.4s; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Giáo viên</div></div></div>
+            <div class="dashboard-nav">
+                <a href="teacher-dashboard.html">Quay lại cổng giáo viên</a>
+                <a href="index.html">Trang chủ</a>
+                <a href="index.html" id="teacherStatsLogout">Đăng xuất</a>
+            </div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>📊 Thống kê & Báo cáo</h1><p class="dashboard-subtitle">Tổng quan dữ liệu học tập trong các lớp bạn dạy.</p></div></div>
+
+            <section class="section-card">
+                <div class="stat-grid" id="summaryStats"></div>
+            </section>
+
+            <section class="section-card">
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <h3>📈 Phổ điểm</h3>
+                        <div class="chart-canvas-wrap"><canvas id="histogramChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>📅 Hoạt động nộp bài (7 ngày)</h3>
+                        <div class="chart-canvas-wrap"><canvas id="activityChart"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-card">
+                <div class="chart-card" style="margin-bottom:0;">
+                    <h3>🎯 Tỷ lệ hoàn thành theo lớp</h3>
+                    <div id="completionTable"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('teacher', 'login.html')) return;
+        GeoConnectApp.bindLogout('#teacherStatsLogout');
+
+        const stats = await GeoConnectApp.getTeacherStats();
+        renderSummary(stats.summary);
+        renderHistogram(stats.histogram);
+        renderActivity(stats.activity);
+        renderCompletion(stats.completion);
+    });
+
+    function renderSummary(s) {
+        const el = document.getElementById('summaryStats');
+        const completeRate = s.assignment_count > 0 && s.student_count > 0
+            ? Math.round((s.submission_count / (s.assignment_count * s.student_count)) * 100)
+            : 0;
+        el.innerHTML = `
+            <div class="stat-card"><strong>${s.class_count}</strong><span>Lớp đang dạy</span></div>
+            <div class="stat-card"><strong>${s.student_count}</strong><span>Học sinh</span></div>
+            <div class="stat-card"><strong>${s.assignment_count}</strong><span>Bài tập đã giao</span></div>
+            <div class="stat-card"><strong>${s.submission_count}</strong><span>Bài đã nộp</span></div>
+            <div class="stat-card"><strong>${s.graded_count}</strong><span>Đã chấm</span></div>
+            <div class="stat-card"><strong>${Number(s.avg_score).toFixed(1)}</strong><span>Điểm TB</span></div>
+            <div class="stat-card"><strong>${completeRate}%</strong><span>Tỷ lệ nộp</span></div>
+        `;
+    }
+
+    function renderHistogram(data) {
+        const labels = ['0-5', '5-6.5', '6.5-8', '8-9', '9-10'];
+        const counts = labels.map(l => {
+            const r = data.find(d => d.bucket === l);
+            return r ? r.count : 0;
+        });
+        new Chart(document.getElementById('histogramChart'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Số bài',
+                    data: counts,
+                    backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#20c997', '#27ae60'],
+                    borderRadius: 6,
+                }],
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+        });
+    }
+
+    function renderActivity(data) {
+        // Pad 7 ngày gần đây
+        const days = [];
+        const today = new Date();
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const key = d.toISOString().slice(0, 10);
+            const r = data.find(x => x.day === key);
+            days.push({ label: d.getDate() + '/' + (d.getMonth() + 1), count: r ? r.count : 0 });
+        }
+        new Chart(document.getElementById('activityChart'), {
+            type: 'line',
+            data: {
+                labels: days.map(d => d.label),
+                datasets: [{
+                    label: 'Bài nộp',
+                    data: days.map(d => d.count),
+                    borderColor: '#27ae60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.15)',
+                    fill: true,
+                    tension: 0.3,
+                }],
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+        });
+    }
+
+    function renderCompletion(rows) {
+        const el = document.getElementById('completionTable');
+        if (!rows.length) { el.innerHTML = '<p style="color:#999; text-align:center; padding:20px;">Bạn chưa có lớp nào.</p>'; return; }
+        let html = '<table class="completion-table"><thead><tr><th>Lớp</th><th>HS</th><th>Bài tập</th><th>Đã nộp</th><th>Tỷ lệ</th><th>Điểm TB</th></tr></thead><tbody>';
+        rows.forEach(r => {
+            const expected = r.totalAssignments * r.totalStudents;
+            const pct = expected > 0 ? Math.round((r.totalSubmissions / expected) * 100) : 0;
+            html += `<tr>
+                <td><strong>${r.name}</strong></td>
+                <td>${r.totalStudents}</td>
+                <td>${r.totalAssignments}</td>
+                <td>${r.totalSubmissions}/${expected}</td>
+                <td><div>${pct}%</div><div class="completion-bar"><div class="completion-fill" style="width:${pct}%"></div></div></td>
+                <td>${Number(r.avgScore).toFixed(1)}</td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    }
+    </script>
+</body>
+</html>

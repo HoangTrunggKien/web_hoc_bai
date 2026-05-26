@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết lớp học | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .tab-buttons { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #eee; flex-wrap: wrap; }
+        .tab-btn { padding: 12px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: #666; font-size: 14px; }
+        .tab-btn:hover { color: #27ae60; }
+        .tab-btn.active { color: #27ae60; border-bottom-color: #27ae60; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .student-list { list-style: none; padding: 0; }
+        .student-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9f9f9; border-radius: 6px; margin-bottom: 8px; }
+        .student-info { flex: 1; }
+        .student-name { font-weight: 600; color: #333; }
+        .student-contact { font-size: 12px; color: #999; }
+        .btn-remove { padding: 6px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .btn-remove:hover { background: #c0392b; }
+        
+        .post-form { background: white; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-weight: 600; color: #333; margin-bottom: 6px; font-size: 14px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+        
+        .post-item { background: white; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .post-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+        .post-title { font-size: 16px; font-weight: 600; color: #333; }
+        .post-meta { font-size: 12px; color: #999; margin-top: 4px; }
+        .post-description { color: #555; line-height: 1.6; margin-bottom: 12px; }
+        .files-list { list-style: none; padding: 0; margin-top: 12px; }
+        .file-item { display: flex; align-items: center; gap: 8px; padding: 8px; background: #f5f7fa; border-radius: 4px; margin-bottom: 6px; }
+        .file-icon { font-size: 16px; }
+        .file-name { flex: 1; word-break: break-word; }
+        .file-name a { color: #27ae60; text-decoration: none; }
+        .file-name a:hover { text-decoration: underline; }
+        .post-actions { display: flex; gap: 8px; margin-top: 12px; }
+        .btn-small { padding: 6px 12px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .btn-small:hover { background: #2980b9; }
+        .btn-delete { background: #e74c3c; }
+        .btn-delete:hover { background: #c0392b; }
+        
+        .file-upload-area { background: #f0f7ff; border: 2px dashed #3498db; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .file-upload-area:hover { background: #e8f4fd; border-color: #2980b9; }
+        .file-upload-area.dragover { background: #d4e6f1; border-color: #27ae60; }
+        .file-list { margin-top: 16px; }
+        .file-item-pending { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; }
+        .file-item-pending .btn-remove { padding: 4px 8px; font-size: 11px; }
+        
+        .class-header { background: #27ae60; color: white; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+        .class-header h1 { margin: 0 0 4px 0; font-size: 24px; }
+        .class-header p { margin: 0; opacity: 0.9; }
+        .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #999; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand">
+                <img src="logo.png" alt="GeoConnect 6">
+                <div>
+                    <strong>GeoConnect 6</strong>
+                    <div class="small-note">Cổng giáo viên</div>
+                </div>
+            </div>
+            <div class="dashboard-nav">
+                <a href="teacher-create-class.html">🔙 Quay lại lớp</a>
+                <a href="teacher-assignments.html">📝 Giao bài</a>
+                <a href="teacher-grading.html">✅ Chấm điểm</a>
+                <a href="index.html" id="classDetailLogout">Đăng xuất</a>
+            </div>
+        </aside>
+        <main class="dashboard-content">
+            <div id="classHeader"></div>
+            
+            <div id="alertContainer"></div>
+            
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab('overview')">📊 Tổng quan</button>
+                <button class="tab-btn" onclick="switchTab('students')">👥 Danh sách học sinh</button>
+                <button class="tab-btn" onclick="switchTab('posts')">📝 Bài đăng</button>
+            </div>
+
+            <!-- Tab: Tổng quan -->
+            <div id="overview" class="tab-content active">
+                <section class="page-shell">
+                    <h3>📊 Thống kê lớp</h3>
+                    <div class="mini-stat-grid" style="margin-bottom:20px;">
+                        <div class="mini-stat">
+                            <strong id="studentCountStat">0</strong>
+                            <span class="small-note">Học sinh</span>
+                        </div>
+                        <div class="mini-stat">
+                            <strong id="postCountStat">0</strong>
+                            <span class="small-note">Bài đăng</span>
+                        </div>
+                        <div class="mini-stat">
+                            <strong id="assignmentCountStat">0</strong>
+                            <span class="small-note">Bài tập</span>
+                        </div>
+                    </div>
+                    <div style="background: white; border: 1px solid #eee; border-radius: 8px; padding: 16px;">
+                        <p>Quản lý lớp học từ các thẻ ở trên:</p>
+                        <ul style="color: #555; line-height: 1.8;">
+                            <li>📋 <strong>Danh sách học sinh:</strong> Xem danh sách học sinh đã tham gia và quản lý thành viên</li>
+                            <li>📝 <strong>Bài đăng:</strong> Đăng bài học, tài liệu, thông báo cho học sinh</li>
+                        </ul>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab: Danh sách học sinh -->
+            <div id="students" class="tab-content">
+                <section class="page-shell">
+                    <h3>👥 Danh sách học sinh tham gia lớp</h3>
+                    <ul class="student-list" id="studentList"></ul>
+                </section>
+            </div>
+
+            <!-- Tab: Bài đăng -->
+            <div id="posts" class="tab-content">
+                <section class="page-shell">
+                    <h3>📝 Đăng bài học / Tài liệu</h3>
+                    
+                    <div class="post-form">
+                        <h4 style="margin-top: 0; color: #333;">Tạo bài đăng mới</h4>
+                        <form id="postForm" onsubmit="handleCreatePost(event)">
+                            <div class="form-group">
+                                <label>Tiêu đề bài</label>
+                                <input type="text" id="postTitle" required placeholder="VD: Hệ thống kinh vĩ tuyến - Bài học tuần 1">
+                            </div>
+                            <div class="form-group">
+                                <label>Nội dung</label>
+                                <textarea id="postDescription" required placeholder="Viết nội dung bài học, hướng dẫn, hoặc thông báo..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>📁 Tải lên tài liệu (PDF, hình ảnh, video...)</label>
+                                <div class="file-upload-area" id="fileUploadArea" ondrop="handleFileDrop(event)" ondragover="handleFileDragOver(event)" ondragleave="handleFileDragLeave(event)">
+                                    <p style="margin: 0;">📤 Kéo thả file hoặc nhấp để chọn</p>
+                                    <p style="font-size: 12px; color: #666; margin-top: 4px;">Hỗ trợ: PDF, ảnh (JPG, PNG), video (MP4), Word, Excel</p>
+                                </div>
+                                <input type="file" id="fileInput" multiple style="display: none;">
+                                <div class="file-list" id="fileList"></div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="submit" class="btn-primary" style="padding: 10px 20px;">✚ Đăng bài</button>
+                                <button type="reset" class="btn-outline">Hủy</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <h4 style="margin-top: 24px; color: #333;">📚 Các bài đã đăng</h4>
+                    <div id="postsList"></div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentClassId = null;
+        let currentClass = null;
+        let selectedFiles = [];
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (!await GeoConnectApp.ensureRoleAccess('teacher', 'login.html')) return;
+            GeoConnectApp.bindLogout('#classDetailLogout');
+
+            const params = new URLSearchParams(window.location.search);
+            currentClassId = params.get('classId');
+            if (!currentClassId) { window.location.href = 'teacher-create-class.html'; return; }
+
+            currentClass = await GeoConnectApp.getClassById(currentClassId).catch(() => null);
+            if (!currentClass) {
+                alert('Không tìm thấy lớp');
+                window.location.href = 'teacher-create-class.html';
+                return;
+            }
+
+            await loadClassData();
+
+            const fileUploadArea = document.getElementById('fileUploadArea');
+            const fileInput = document.getElementById('fileInput');
+            if (fileUploadArea) {
+                fileUploadArea.addEventListener('click', function(e) {
+                    e.preventDefault(); e.stopPropagation();
+                    fileInput.click();
+                });
+            }
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) { handleFileSelect(e); });
+            }
+        });
+
+        async function loadClassData() {
+            const header = document.getElementById('classHeader');
+            header.innerHTML = `
+                <div class="class-header">
+                    <h1>📚 ${currentClass.name}</h1>
+                    <p>Mã lớp: <strong>${currentClass.code}</strong></p>
+                </div>`;
+
+            const [students, posts, assignments] = await Promise.all([
+                GeoConnectApp.getClassStudents(currentClassId),
+                GeoConnectApp.getClassPostsByClassId(currentClassId),
+                GeoConnectApp.getAssignments(currentClassId),
+            ]);
+
+            document.getElementById('studentCountStat').textContent = students.length;
+            document.getElementById('postCountStat').textContent = posts.length;
+            document.getElementById('assignmentCountStat').textContent = assignments.length;
+
+            const studentList = document.getElementById('studentList');
+            if (!students.length) {
+                studentList.innerHTML = '<div class="empty-state">👥 Chưa có học sinh nào tham gia lớp</div>';
+            } else {
+                studentList.innerHTML = students.map(student => `
+                    <li class="student-item">
+                        <div class="student-info">
+                            <div class="student-name">${student.fullName}</div>
+                            <div class="student-contact">📧 ${student.contact || ''}</div>
+                        </div>
+                        <button class="btn-remove" onclick="removeStudent('${student.username}')">Xóa</button>
+                    </li>`).join('');
+            }
+
+            displayPosts(posts);
+        }
+
+        function displayPosts(posts) {
+            const postsList = document.getElementById('postsList');
+            if (!posts.length) {
+                postsList.innerHTML = '<div class="empty-state">📝 Chưa có bài đăng nào. Hãy đăng bài đầu tiên!</div>';
+                return;
+            }
+            let html = '';
+            posts.forEach(post => {
+                const createdDate = new Date(post.createdAt).toLocaleDateString('vi-VN');
+                html += `
+                    <div class="post-item">
+                        <div class="post-header">
+                            <div><div class="post-title">${post.title}</div><div class="post-meta">📅 ${createdDate}</div></div>
+                        </div>
+                        <div class="post-description">${post.description || ''}</div>`;
+                if (post.files && post.files.length > 0) {
+                    html += '<ul class="files-list"><strong>📎 Tài liệu đính kèm:</strong>';
+                    post.files.forEach(file => {
+                        html += `<li class="file-item"><span class="file-icon">📄</span><span class="file-name"><a href="${file.url}" target="_blank" rel="noopener">${file.name}</a></span></li>`;
+                    });
+                    html += '</ul>';
+                }
+                html += `
+                        <div class="post-actions">
+                            <button class="btn-small btn-delete" onclick="deletePost('${post.id}')">🗑️ Xóa</button>
+                        </div>
+                    </div>`;
+            });
+            postsList.innerHTML = html;
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        async function handleCreatePost(event) {
+            event.preventDefault();
+            const title = document.getElementById('postTitle').value.trim();
+            const description = document.getElementById('postDescription').value.trim();
+            if (!title || !description) { showAlert('Vui lòng điền đầy đủ tiêu đề và nội dung!', 'error'); return; }
+
+            try {
+                showAlert('⏳ Đang tải lên ' + selectedFiles.length + ' file...', 'success');
+                const uploaded = [];
+                for (const f of selectedFiles) {
+                    const meta = await GeoConnectApp.uploadFile(f);
+                    uploaded.push({ name: f.name, size: f.size, type: f.type, url: meta.url });
+                }
+                await GeoConnectApp.createClassPost(currentClassId, title, description, uploaded);
+
+                showAlert('✅ Bài đã được đăng thành công!', 'success');
+                document.getElementById('postForm').reset();
+                selectedFiles = [];
+                document.getElementById('fileList').innerHTML = '';
+                document.getElementById('fileInput').value = '';
+                await loadClassData();
+            } catch (err) {
+                showAlert('❌ ' + (err.data?.message || err.message || 'Đăng bài thất bại'), 'error');
+            }
+        }
+
+        function handleFileDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            document.getElementById('fileUploadArea').classList.remove('dragover');
+            
+            const files = Array.from(event.dataTransfer.files);
+            addFilesToList(files);
+        }
+
+        function handleFileDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            document.getElementById('fileUploadArea').classList.add('dragover');
+        }
+
+        function handleFileDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            document.getElementById('fileUploadArea').classList.remove('dragover');
+        }
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            addFilesToList(files);
+        }
+
+        function addFilesToList(files) {
+            if (!files || files.length === 0) {
+                showAlert('Không có file nào được chọn!', 'error');
+                return;
+            }
+            
+            let addedCount = 0;
+            files.forEach(file => {
+                // Kiểm tra nếu file chưa tồn tại trong danh sách
+                const exists = selectedFiles.some(f => f.name === file.name && f.size === file.size);
+                if (!exists) {
+                    selectedFiles.push(file);
+                    addedCount++;
+                }
+            });
+            
+            if (addedCount > 0) {
+                showAlert('✅ Đã thêm ' + addedCount + ' file!', 'success');
+            }
+            displaySelectedFiles();
+        }
+
+        function displaySelectedFiles() {
+            const fileList = document.getElementById('fileList');
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = '';
+                return;
+            }
+            
+            const html = '<div style="margin-top: 12px; padding: 12px; background: #f0f7ff; border: 1px solid #3498db; border-radius: 6px;"><strong>📎 File được chọn (' + selectedFiles.length + '):</strong>' +
+                selectedFiles.map((file, index) => `
+                <div class="file-item-pending">
+                    <span>📄 ${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+                    <button type="button" class="btn-remove" onclick="removeSelectedFile(${index})">Xóa</button>
+                </div>
+            `).join('') + '</div>';
+            fileList.innerHTML = html;
+        }
+
+        function removeSelectedFile(index) {
+            selectedFiles.splice(index, 1);
+            displaySelectedFiles();
+        }
+
+        async function deletePost(postId) {
+            if (!confirm('Bạn chắc chắn muốn xóa bài đăng này?')) return;
+            try { await GeoConnectApp.deleteClassPost(postId); showAlert('✅ Bài đã được xóa!', 'success'); await loadClassData(); }
+            catch (err) { showAlert('❌ ' + (err.data?.message || err.message), 'error'); }
+        }
+
+        async function removeStudent(studentUsername) {
+            if (!confirm('Bạn chắc chắn muốn xóa học sinh này khỏi lớp?')) return;
+            try { await GeoConnectApp.removeStudentEnrollment(currentClassId, studentUsername); showAlert('✅ Học sinh đã được xóa khỏi lớp!', 'success'); await loadClassData(); }
+            catch (err) { showAlert('❌ ' + (err.data?.message || err.message), 'error'); }
+        }
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-' + type;
+            alertDiv.textContent = message;
+            alertContainer.insertAdjacentElement('afterbegin', alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

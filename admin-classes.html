@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý lớp học | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .class-card {
+            background: white;
+            border: 1px solid #d6e0ec;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .class-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+        }
+        .class-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+        }
+        .small-note {
+            color: #666;
+            font-size: 12px;
+            margin: 4px 0;
+        }
+        .progress-track {
+            background: #f0f2f5;
+            border-radius: 8px;
+            height: 6px;
+            margin: 12px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background: linear-gradient(to right, #28a745, #20c997);
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            margin: auto;
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #d6e0ec;
+            padding-bottom: 12px;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            border-top: 1px solid #d6e0ec;
+            padding-top: 12px;
+        }
+        .btn-modal {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .btn-primary-modal {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary-modal:hover {
+            background: #0056b3;
+        }
+        .btn-danger-modal {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger-modal:hover {
+            background: #c82333;
+        }
+        .btn-secondary-modal {
+            background: #e9ecef;
+            color: #333;
+        }
+        .btn-secondary-modal:hover {
+            background: #dee2e6;
+        }
+        .btn-success-modal {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success-modal:hover {
+            background: #218838;
+        }
+        .stat-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .stat-item strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+        .student-list {
+            margin-top: 16px;
+        }
+        .student-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .student-item:last-child {
+            border-bottom: none;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d6e0ec;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .btn-small {
+            padding: 6px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .btn-small-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-small-danger:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Admin</div></div></div><div class="dashboard-nav"><a href="dashboard.html">Quay lại cổng admin</a><a href="index.html">Trang chủ</a><a href="index.html" id="adminClassesLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content"><div class="dashboard-topbar"><div><h1>Quản lý lớp học</h1><p class="dashboard-subtitle">Xem toàn bộ lớp học và kiểm soát dữ liệu lớp.</p></div></div><section class="section-card"><div class="class-grid" id="classesGrid"></div></section></main>
+    </div>
+
+    <!-- Class Detail Modal -->
+    <div class="modal-overlay" id="classDetailModal">
+        <div class="modal-content">
+            <div class="modal-header" id="classDetailHeader"></div>
+            <div class="modal-body" id="classDetailBody"></div>
+            <div class="modal-footer">
+                <button class="btn-modal btn-secondary-modal" onclick="closeClassDetail()">Đóng</button>
+                <button class="btn-modal btn-danger-modal" onclick="deleteClassConfirm()">Xóa lớp</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Students Modal - Main View-->
+    <div class="modal-overlay" id="manageStudentsModal">
+        <div class="modal-content">
+            <div class="modal-header" id="manageHeaderTitle">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span id="classNameDisplay"></span>
+                    <small style="font-size: 12px; font-weight: normal; color: #666;">
+                        <a href="#" onclick="viewClassDetail(currentManageClassId); return false;" style="color: #007bff; text-decoration: none; margin-right: 10px;">Chi tiết</a>
+                        <a href="#" onclick="closeManageStudents(); return false;" style="color: #666; text-decoration: none;">✕</a>
+                    </small>
+                </div>
+            </div>
+            
+            <div class="modal-body">
+                <!-- PHẦN 1: THÊM HỌC SINH -->
+                <div style="background: #f8f9fa; padding: 16px; border-radius: 12px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; margin-bottom: 12px; color: #333;">➕ Thêm Học Sinh</h3>
+                    <div class="form-group">
+                        <label>Chọn học sinh từ danh sách</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="studentSelect" style="flex: 1; padding: 10px 12px; border: 1px solid #d6e0ec; border-radius: 8px; font-size: 14px;">
+                                <option value="">-- Chọn học sinh --</option>
+                            </select>
+                            <button class="btn-modal btn-success-modal" onclick="addStudentToClass()" style="flex: 0 0 auto;">Thêm</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PHẦN 2: DANH SÁCH HỌC SINH -->
+                <div>
+                    <h3 style="margin-top: 0; margin-bottom: 14px; color: #333;">📚 Danh Sách Học Sinh (<span id="studentCountDisplay">0</span>)</h3>
+                    <div id="managedStudentList"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-modal btn-secondary-modal" onclick="closeManageStudents()">Đóng</button>
+                <button class="btn-modal btn-danger-modal" onclick="deleteClassFromManage()">Xóa lớp</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDetailClassId = null;
+        let currentManageClassId = null;
+        let _allStudents = [];
+        let _allTeachers = [];
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (!await GeoConnectApp.ensureRoleAccess('admin', 'login.html')) return;
+            GeoConnectApp.bindLogout('#adminClassesLogout');
+
+            const classesGrid = document.getElementById('classesGrid');
+
+            async function loadClasses() {
+                const [classes, allUsers] = await Promise.all([
+                    GeoConnectApp.getClasses(),
+                    GeoConnectApp.getAllUsers(),
+                ]);
+                _allStudents = allUsers.filter(u => u.role === 'student');
+                _allTeachers = allUsers.filter(u => u.role === 'teacher');
+
+                const cards = await Promise.all(classes.map(async cls => {
+                    const [students, progress] = await Promise.all([
+                        GeoConnectApp.getClassStudents(cls.id),
+                        GeoConnectApp.getClassProgress(cls.id).catch(() => []),
+                    ]);
+                    const avg = progress.length ? Math.round(progress.reduce((s, p) => s + p.completionPercent, 0) / progress.length) : 0;
+                    const teacher = allUsers.find(u => u.username === cls.teacher);
+                    return `
+                        <div class="class-card" onclick="openManageStudents('${cls.id}')">
+                            <h3>${cls.name}</h3>
+                            <p class="small-note">Mã: ${cls.code}</p>
+                            <p class="small-note">Giáo viên: ${teacher ? teacher.fullName : 'N/A'}</p>
+                            <p class="small-note">${students.length} học sinh · Tiến độ ${avg}%</p>
+                            <div class="progress-track"><div class="progress-fill" style="width:${avg}%"></div></div>
+                        </div>`;
+                }));
+                classesGrid.innerHTML = cards.join('');
+            }
+
+            window.openManageStudents = async function(classId) {
+                const cls = await GeoConnectApp.getClassById(classId);
+                if (!cls) return;
+                currentManageClassId = classId;
+                document.getElementById('classNameDisplay').textContent = cls.name + ' (' + cls.code + ')';
+                await loadManagedStudentsList();
+                document.getElementById('manageStudentsModal').classList.add('active');
+            };
+
+            async function loadManagedStudentsList() {
+                const [currentStudents, progress] = await Promise.all([
+                    GeoConnectApp.getClassStudents(currentManageClassId),
+                    GeoConnectApp.getClassProgress(currentManageClassId).catch(() => []),
+                ]);
+                const currentStudentUsernames = currentStudents.map(u => u.username);
+                const availableStudents = _allStudents.filter(s => !currentStudentUsernames.includes(s.username));
+
+                const studentSelect = document.getElementById('studentSelect');
+                studentSelect.innerHTML = '<option value="">-- Chọn học sinh --</option>' +
+                    availableStudents.map(s => `<option value="${s.username}">${s.fullName} (${s.contact || ''})</option>`).join('');
+
+                document.getElementById('studentCountDisplay').textContent = currentStudents.length;
+
+                const managedList = document.getElementById('managedStudentList');
+                if (currentStudents.length > 0) {
+                    let html = '<div class="student-list">';
+                    currentStudents.forEach(user => {
+                        const sp = progress.find(p => p.studentUsername === user.username);
+                        const status = sp && sp.completionPercent > 0 ? 'success' : 'warning';
+                        const statusText = sp && sp.completionPercent > 0 ? 'Đang làm bài' : 'Chưa bắt đầu';
+                        html += `
+                            <div class="student-item">
+                                <div>
+                                    <div><strong>${user.fullName}</strong></div>
+                                    <div class="small-note">${user.contact || ''} · Tiến độ: ${sp ? sp.completionPercent + '%' : '0%'}</div>
+                                    <span class="badge badge-${status}" style="display: inline-block; margin-top: 4px;">${statusText}</span>
+                                </div>
+                                <button class="btn-small btn-small-danger" onclick="removeStudentFromClass('${user.username}')">Xóa</button>
+                            </div>`;
+                    });
+                    html += '</div>';
+                    managedList.innerHTML = html;
+                } else {
+                    managedList.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #999;"><p>Chưa có học sinh nào trong lớp</p><p style="font-size: 12px;">Sử dụng phần thêm học sinh phía trên để thêm</p></div>';
+                }
+            }
+
+            window.viewClassDetail = async function(classId) {
+                const cls = await GeoConnectApp.getClassById(classId);
+                if (!cls) return;
+                document.getElementById('manageStudentsModal').classList.remove('active');
+                currentDetailClassId = classId;
+                const [students, progress] = await Promise.all([
+                    GeoConnectApp.getClassStudents(classId),
+                    GeoConnectApp.getClassProgress(classId).catch(() => []),
+                ]);
+                const teacher = _allTeachers.find(u => u.username === cls.teacher);
+                const avgProgress = progress.length ? Math.round(progress.reduce((s, p) => s + p.completionPercent, 0) / progress.length) : 0;
+                const scoresCount = progress.filter(p => p.averageScore > 0).length;
+                const avgScore = scoresCount > 0 ? Math.round(progress.reduce((s, p) => s + (p.averageScore || 0), 0) / scoresCount) : 0;
+
+                document.getElementById('classDetailModal').querySelector('.modal-header').innerHTML = cls.name;
+                let html = `
+                    <div class="stat-item"><strong>Mã lớp:</strong> ${cls.code}</div>
+                    <div class="stat-item"><strong>Giáo viên:</strong> ${teacher ? teacher.fullName + ' (' + (teacher.contact || '') + ')' : 'N/A'}</div>
+                    <div class="stat-item"><strong>Ngày tạo:</strong> ${new Date(cls.createdAt).toLocaleDateString('vi-VN')}</div>
+                    <div class="stat-item"><strong>Tổng học sinh:</strong> ${students.length}</div>
+                    <div class="stat-item"><strong>Tiến độ trung bình:</strong> ${avgProgress}%</div>
+                    <div class="stat-item"><strong>Điểm trung bình:</strong> ${avgScore > 0 ? avgScore : 'Chưa có dữ liệu'}</div>
+                `;
+                if (students.length > 0) {
+                    html += `<h3 style="margin-top: 20px; margin-bottom: 12px;">Danh sách học sinh (${students.length})</h3><div class="student-list">`;
+                    students.forEach(user => {
+                        const sp = progress.find(p => p.studentUsername === user.username);
+                        const status = sp && sp.completionPercent > 0 ? 'success' : 'warning';
+                        const statusText = sp && sp.completionPercent > 0 ? 'Đang làm bài' : 'Chưa bắt đầu';
+                        html += `
+                            <div class="student-item">
+                                <div><div><strong>${user.fullName}</strong></div><div class="small-note">${user.contact || ''}</div></div>
+                                <div style="text-align: right;"><div class="small-note">${sp ? sp.completionPercent + '%' : '0%'}</div><span class="badge badge-${status}">${statusText}</span></div>
+                            </div>`;
+                    });
+                    html += `</div>`;
+                } else {
+                    html += `<p style="text-align: center; color: #999; margin-top: 20px;">Không có học sinh nào trong lớp</p>`;
+                }
+                document.getElementById('classDetailBody').innerHTML = html;
+                document.getElementById('classDetailModal').classList.add('active');
+            };
+
+            window.addStudentToClass = async function() {
+                const studentUsername = document.getElementById('studentSelect').value;
+                if (!studentUsername || !currentManageClassId) { alert('Vui lòng chọn học sinh'); return; }
+                const result = await GeoConnectApp.enrollStudent(currentManageClassId, studentUsername);
+                if (result.ok) { alert('Thêm học sinh thành công'); await loadManagedStudentsList(); }
+                else alert(result.message || 'Không thể thêm học sinh');
+            };
+
+            window.removeStudentFromClass = async function(studentUsername) {
+                if (confirm('Bạn có chắc chắn muốn xóa học sinh khỏi lớp?')) {
+                    try { await GeoConnectApp.removeStudentEnrollment(currentManageClassId, studentUsername); alert('Xóa học sinh thành công'); await loadManagedStudentsList(); }
+                    catch (err) { alert('Xóa thất bại: ' + (err.message || '')); }
+                }
+            };
+
+            window.closeManageStudents = function() { document.getElementById('manageStudentsModal').classList.remove('active'); currentManageClassId = null; };
+
+            window.deleteClassFromManage = async function() {
+                if (!currentManageClassId) return;
+                const cls = await GeoConnectApp.getClassById(currentManageClassId);
+                if (confirm('Bạn có chắc chắn muốn xóa lớp "' + cls.name + '"?\nHành động này sẽ xóa tất cả dữ liệu liên quan!')) {
+                    try { await GeoConnectApp.deleteClass(currentManageClassId); alert('Xóa lớp thành công'); closeManageStudents(); await loadClasses(); }
+                    catch (err) { alert('Xóa lớp thất bại: ' + (err.message || '')); }
+                }
+            };
+
+            window.closeClassDetail = function() { document.getElementById('classDetailModal').classList.remove('active'); currentDetailClassId = null; };
+
+            window.deleteClassConfirm = async function() {
+                if (!currentDetailClassId) return;
+                const cls = await GeoConnectApp.getClassById(currentDetailClassId);
+                if (confirm('Bạn có chắc chắn muốn xóa lớp "' + cls.name + '"?\nHành động này sẽ xóa tất cả dữ liệu liên quan!')) {
+                    try { await GeoConnectApp.deleteClass(currentDetailClassId); alert('Xóa lớp thành công'); closeClassDetail(); await loadClasses(); }
+                    catch (err) { alert('Xóa lớp thất bại: ' + (err.message || '')); }
+                }
+            };
+
+            document.getElementById('classDetailModal').addEventListener('click', function(e) { if (e.target === this) closeClassDetail(); });
+            document.getElementById('manageStudentsModal').addEventListener('click', function(e) { if (e.target === this) closeManageStudents(); });
+
+            await loadClasses();
+        });
+    </script>
+</body>
+</html>

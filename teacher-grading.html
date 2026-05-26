@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chấm điểm | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .submission-table {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .submission-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .submission-info {
+            flex: 1;
+        }
+        .submission-info > div:first-child {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .submission-info > div:last-child {
+            font-size: 12px;
+            color: #666;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            margin: 0 8px;
+        }
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            margin: auto;
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #d6e0ec;
+            padding-bottom: 12px;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            border-top: 1px solid #d6e0ec;
+            padding-top: 12px;
+        }
+        .btn-modal {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .btn-primary-modal {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary-modal:hover {
+            background: #0056b3;
+        }
+        .btn-secondary-modal {
+            background: #e9ecef;
+            color: #333;
+        }
+        .btn-secondary-modal:hover {
+            background: #dee2e6;
+        }
+        .form-group {
+            margin-bottom: 14px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d6e0ec;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        .btn-small {
+            padding: 6px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            background: #007bff;
+            color: white;
+        }
+        .btn-small:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Giáo viên</div></div></div>
+            <div class="dashboard-nav"><a href="teacher-dashboard.html">Quay lại cổng giáo viên</a><a href="index.html">Trang chủ</a><a href="index.html" id="teacherGradingLogout">Đăng xuất</a></div>
+        </aside>
+        <main class="dashboard-content">
+            <div class="dashboard-topbar"><div><h1>Chấm điểm</h1><p class="dashboard-subtitle">Xem danh sách bài làm và chấm điểm nhanh chóng.</p></div></div>
+            
+            <section class="section-card">
+                <div class="input-group" style="margin-bottom:14px;">
+                    <label>Chọn bài tập</label>
+                    <select id="assignmentSelect" style="width:100%; padding:12px 14px; border:1px solid #d6e0ec; border-radius:12px;">
+                        <option value="">-- Chọn bài tập --</option>
+                    </select>
+                </div>
+                <div id="submissionsList"></div>
+            </section>
+
+            <!-- Grading Modal -->
+            <div class="modal-overlay" id="gradingModal">
+                <div class="modal-content">
+                    <div class="modal-header" id="gradingModalHeader">✏️ Chấm bài</div>
+                    <div class="modal-body" id="gradingForm"></div>
+                    <div class="modal-footer">
+                        <button class="btn-modal btn-secondary-modal" onclick="closeGradingModal()">Hủy</button>
+                        <button class="btn-modal btn-primary-modal" onclick="saveGrade()">Lưu điểm</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+        let currentSubmissionId = null;
+        let _allUsersCache = [];
+        let _currentSubmissions = [];
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (!await GeoConnectApp.ensureRoleAccess('teacher', 'login.html')) return;
+            GeoConnectApp.bindLogout('#teacherGradingLogout');
+
+            const user = await GeoConnectApp.getCurrentUser();
+            _allUsersCache = await GeoConnectApp.getAllUsers();
+            const assignmentSelect = document.getElementById('assignmentSelect');
+            const submissionsList = document.getElementById('submissionsList');
+
+            async function loadAssignments() {
+                const allClasses = await GeoConnectApp.getTeacherClasses(user.username);
+                const lists = await Promise.all(allClasses.map(cls => GeoConnectApp.getAssignments(cls.id)));
+                const allAssignments = [].concat(...lists);
+                assignmentSelect.innerHTML = '<option value="">-- Chọn bài tập --</option>';
+                allAssignments.forEach(a => {
+                    assignmentSelect.innerHTML += '<option value="' + a.id + '">' + a.title + '</option>';
+                });
+            }
+
+            async function loadSubmissions() {
+                const assignmentId = assignmentSelect.value;
+                if (!assignmentId) {
+                    submissionsList.innerHTML = '<p style="text-align:center; color:#666; padding: 40px;">Chọn bài tập để xem danh sách bài làm</p>';
+                    return;
+                }
+                _currentSubmissions = await GeoConnectApp.getSubmissions(assignmentId);
+                if (!_currentSubmissions.length) {
+                    submissionsList.innerHTML = '<p style="text-align:center; color:#999; padding: 40px;">Chưa có học sinh nộp bài</p>';
+                    return;
+                }
+                let html = '<div class="submission-table">';
+                _currentSubmissions.forEach(sub => {
+                    const student = _allUsersCache.find(u => u.username === sub.studentUsername);
+                    const statusBadge = sub.score !== null && sub.score !== undefined
+                        ? '<span class="badge badge-success">Đã chấm: ' + sub.score + '/10</span>'
+                        : '<span class="badge badge-warning">Chưa chấm</span>';
+                    html += `
+                        <div class="submission-row">
+                            <div class="submission-info">
+                                <div>${student ? student.fullName : sub.studentUsername}</div>
+                                <div>Nộp: ${new Date(sub.submittedAt).toLocaleString('vi-VN')}</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                ${statusBadge}
+                                <button class="btn-small" onclick="openGradingModal('${sub.id}')">Chấm</button>
+                            </div>
+                        </div>`;
+                });
+                html += '</div>';
+                submissionsList.innerHTML = html;
+            }
+
+            window.openGradingModal = function(submissionId) {
+                const submission = _currentSubmissions.find(s => s.id === submissionId);
+                if (!submission) return;
+                const student = _allUsersCache.find(u => u.username === submission.studentUsername);
+                currentSubmissionId = submissionId;
+
+                let submissionFileHtml = '';
+                if (submission.submissionFile && submission.submissionFile.url) {
+                    const sizeKB = ((submission.submissionFile.size || 0) / 1024).toFixed(2);
+                    submissionFileHtml = `
+                        <div class="form-group">
+                            <label style="color: #333; font-size: 14px;">📤 Bài làm (Tệp được tải lên)</label>
+                            <div style="padding: 12px; background: #f8f9fa; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>📄 ${submission.submissionFile.name} (${sizeKB} KB)</span>
+                                <a class="btn-small" href="${submission.submissionFile.url}" target="_blank" rel="noopener">📥 Tải</a>
+                            </div>
+                        </div>`;
+                }
+
+                document.getElementById('gradingForm').innerHTML = `
+                    <div class="form-group">
+                        <label style="color: #333; font-size: 14px;">👨‍🎓 Học sinh</label>
+                        <div style="padding: 10px 12px; background: #f8f9fa; border-radius: 8px; font-weight: 500;">${student ? student.fullName : submission.studentUsername}</div>
+                    </div>
+                    ${submissionFileHtml}
+                    <div class="form-group">
+                        <label>📝 Điểm (0-10)</label>
+                        <input type="number" id="scoreInput" min="0" max="10" step="0.5" value="${submission.score != null ? submission.score : ''}" placeholder="Nhập điểm của học sinh">
+                    </div>
+                    <div class="form-group">
+                        <label>💬 Nhận xét / Phản hồi (tùy chọn)</label>
+                        <textarea id="feedbackInput" placeholder="Viết nhận xét hoặc hướng dẫn cải thiện...">${submission.feedback || ''}</textarea>
+                    </div>`;
+                document.getElementById('gradingModal').classList.add('active');
+            };
+
+            window.closeGradingModal = function() {
+                document.getElementById('gradingModal').classList.remove('active');
+                currentSubmissionId = null;
+            };
+
+            window.saveGrade = async function() {
+                if (!currentSubmissionId) return;
+                const score = parseFloat(document.getElementById('scoreInput').value);
+                const feedback = document.getElementById('feedbackInput').value.trim();
+                if (isNaN(score) || score < 0 || score > 10) { alert('Điểm phải từ 0 đến 10'); return; }
+                try {
+                    await GeoConnectApp.gradeSubmission(currentSubmissionId, score, feedback);
+                    alert('Lưu điểm thành công!');
+                    closeGradingModal();
+                    await loadSubmissions();
+                } catch (err) {
+                    alert('Lưu điểm thất bại: ' + (err.data?.message || err.message));
+                }
+            };
+
+            document.getElementById('gradingModal').addEventListener('click', function(e) {
+                if (e.target === this) closeGradingModal();
+            });
+
+            await loadAssignments();
+            assignmentSelect.addEventListener('change', loadSubmissions);
+        });
+    </script>
+</body>
+</html>

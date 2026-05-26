@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết bài tập | GeoConnect 6</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+    <style>
+        .detail-header { background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .detail-header h1 { margin: 0 0 8px 0; }
+        .detail-header p { margin: 4px 0; font-size: 14px; opacity: 0.9; }
+        .detail-section { background: white; border: 1px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .detail-section h3 { margin-top: 0; color: #8e44ad; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .detail-table { width: 100%; }
+        .detail-table tr { border-bottom: 1px solid #f5f5f5; }
+        .detail-table tr:last-child { border-bottom: none; }
+        .detail-table td { padding: 12px 0; }
+        .detail-table td:first-child { font-weight: 600; color: #333; width: 30%; }
+        .detail-table td:last-child { color: #666; }
+        .score-box { padding: 16px; background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%); color: white; border-radius: 8px; text-align: center; }
+        .score-number { font-size: 36px; font-weight: 600; margin-bottom: 4px; }
+        .score-label { font-size: 14px; opacity: 0.9; }
+        .feedback-box { padding: 16px; background: #f5f7fa; border-left: 4px solid #8e44ad; border-radius: 8px; }
+        .feedback-box h4 { margin-top: 0; color: #8e44ad; }
+        .feedback-box p { margin-bottom: 0; line-height: 1.6; }
+        .answer-review { padding: 12px; background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 12px; }
+        .answer-review .answer-q { font-weight: 600; color: #333; margin-bottom: 8px; }
+        .answer-review .answer-a { padding: 8px 12px; background: #f5f7fa; border-radius: 4px; color: #666; }
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .status-submitted { background: #d4edda; color: #155724; }
+        .status-graded { background: #c8e6c9; color: #1b5e20; }
+        .status-pending { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body class="dashboard-page loading">
+    <div class="dashboard-layout">
+        <aside class="dashboard-sidebar"><div class="dashboard-brand"><img src="logo.png" alt="GeoConnect 6"><div><strong>GeoConnect 6</strong><div class="small-note">Học sinh</div></div></div><div class="dashboard-nav"><a href="student-home.html">Quay lại cổng học sinh</a><a href="index.html">Trang chủ</a><a href="index.html" id="assignmentDetailLogout">Đăng xuất</a></div></aside>
+        <main class="dashboard-content">
+            <button class="btn-outline" id="btnBackDetail" style="margin-bottom: 16px;">← Quay lại</button>
+            <div id="detailContent"></div>
+        </main>
+    </div>
+    <script>document.addEventListener('DOMContentLoaded', async function () {
+        if (!await GeoConnectApp.ensureRoleAccess('student', 'login.html')) return;
+        GeoConnectApp.bindLogout('#assignmentDetailLogout');
+
+        const user = await GeoConnectApp.getCurrentUser();
+        const detailContent = document.getElementById('detailContent');
+        const btnBackDetail = document.getElementById('btnBackDetail');
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const assignmentId = urlParams.get('assignmentId') || urlParams.get('id');
+
+        if (!assignmentId) {
+            detailContent.innerHTML = '<div style="text-align:center; color:#666; padding:20px;">Không tìm thấy bài tập</div>';
+            return;
+        }
+
+        const assignment = await GeoConnectApp.getAssignmentById(assignmentId).catch(() => null);
+        if (!assignment) {
+            detailContent.innerHTML = '<div style="text-align:center; color:#666; padding:20px;">Không tìm thấy bài tập</div>';
+            return;
+        }
+        const cls = await GeoConnectApp.getClassById(assignment.classId).catch(() => null);
+        const className = cls ? cls.name : '';
+
+        const subs = await GeoConnectApp.getStudentSubmissions(user.username, assignmentId);
+        const submission = subs && subs[0];
+        
+        // Build detail HTML
+        let html = '<div class="detail-header"><h1>' + assignment.title + '</h1><p>📚 Lớp: ' + className + '</p></div>';
+        
+        // Assignment info section
+        html += '<div class="detail-section"><h3>📋 Thông tin bài tập</h3><table class="detail-table"><tr><td>Loại bài:</td><td>' + (assignment.type || 'Bài tập thông thường') + '</td></tr><tr><td>Số câu hỏi:</td><td>' + ((assignment.questions || []).length || '-') + ' câu</td></tr><tr><td>Hạn chót:</td><td>' + (assignment.dueAt ? new Date(assignment.dueAt).toLocaleDateString('vi-VN') : 'Không có hạn chót') + '</td></tr></table></div>';
+        
+        // Submission status
+        if (!submission) {
+            html += '<div class="detail-section" style="background:#fffbf0; border-color:#ffe0b2;"><p style="text-align:center; color:#e65100; margin:0;">⏳ Bạn chưa nộp bài tập này. <a href="student-practice.html" style="color:#d84315; font-weight:600;">Bắt đầu làm bài</a></p></div>';
+        } else {
+            // Submission info
+            html += '<div class="detail-section"><h3>📤 Thông tin nộp bài</h3><table class="detail-table"><tr><td>Ngày nộp:</td><td>' + (submission.submittedAt ? new Date(submission.submittedAt).toLocaleString('vi-VN') : 'N/A') + '</td></tr><tr><td>Trạng thái:</td><td><span class="status-badge ' + (submission.score != null ? 'status-graded' : 'status-submitted') + '">' + (submission.score != null ? '✓ Đã chấm' : '✓ Đã nộp') + '</span></td></tr>';
+
+            if (submission.score != null) {
+                html += '<tr><td>Điểm số:</td><td><div class="score-box" style="display:inline-block; width:auto; background:linear-gradient(135deg, #27ae60, #1e5631); margin-top:8px;"><div class="score-number">' + submission.score + '</div><div class="score-label">/10 điểm</div></div></td></tr>';
+            }
+            
+            html += '</table></div>';
+            
+            // Teacher feedback
+            if (submission.feedback) {
+                html += '<div class="detail-section"><h3>💬 Nhận xét từ giáo viên</h3><div class="feedback-box"><p>' + submission.feedback + '</p></div></div>';
+            }
+            
+            // Answer review
+            if (submission.answers && assignment.questions) {
+                html += '<div class="detail-section"><h3>✏️ Xem lại câu trả lời</h3>';
+                assignment.questions.forEach((q, index) => {
+                    const studentAnswer = submission.answers[index];
+                    const isCorrect = q.correct !== undefined && studentAnswer == q.correct;
+                    const icon = isCorrect ? '✓' : (submission.score == null ? '?' : '✗');
+                    
+                    html += '<div class="answer-review"><div class="answer-q">' + icon + ' Câu ' + (index + 1) + ': ' + q.question + '</div>';
+                    
+                    if (q.options) {
+                        html += '<div class="answer-a">Trả lời: ' + (studentAnswer !== undefined && studentAnswer !== '' ? q.options[studentAnswer] : '(Chưa trả lời)') + '</div>';
+                        if (!isCorrect && q.correct !== undefined && submission.score != null) {
+                            html += '<div style="padding:8px 12px; background:#e8f5e9; border-radius:4px; color:#2e7d32; margin-top:4px;">Đáp án đúng: ' + q.options[q.correct] + '</div>';
+                        }
+                    } else {
+                        html += '<div class="answer-a">Trả lời: ' + (studentAnswer || '(Chưa trả lời)') + '</div>';
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+        }
+        
+        detailContent.innerHTML = html;
+        
+        btnBackDetail.addEventListener('click', function() {
+            window.history.back();
+        });
+    });</script>
+</body>
+</html>
